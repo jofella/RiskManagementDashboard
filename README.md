@@ -1,6 +1,6 @@
 Risk Management Dashboard:
 
-The idea behind this project to:
+The idea behind this project is to:
 1. Review the concepts of Risk Mangement from our lecture. 
 2. Showcase the possibilities within streamlit.
 
