@@ -73,6 +73,9 @@ st.markdown("These are used to simulate a normal pdf which is shown below. "
 
 st.write("---")
 
+st.write(lr_df["Log Returns"])
+
+
 
 # ** 3.Visualizations **
 st.header("3. Log Returns Over Time")
