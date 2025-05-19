@@ -1,10 +1,10 @@
 # Risk Management Dashboard
 
 > This project was developed during my master's studies as part of a course on Risk Management.  
-> It serves both as a review of theoretical concepts and an exercise in building interactive dashboards with Streamlit.
+> It serves both as a review of theoretical concepts and an exercise in building interactive dashboards with Streamlit.  
+> This is also my **first application-oriented project** using Streamlit and modular Python structuring.
 
 This project aims to review core concepts of risk management and present them in an educational, interactive way using [Streamlit](https://streamlit.io/).
-
 
 ## Project Goals
 
