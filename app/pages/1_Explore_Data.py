@@ -1,4 +1,11 @@
-from util.load_packages import st, np, pd, os, px, go, stats
+import streamlit as st
+import numpy as np
+import pandas as pd
+import os
+import plotly.express as px
+import plotly.graph_objects as go
+from scipy import stats
+
 from util.data_utils import get_log_returns
 
 

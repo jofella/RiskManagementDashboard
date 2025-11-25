@@ -1,4 +1,4 @@
-from util.load_packages import st  # Assuming `st` is imported from your utility script
+import streamlit as st
 
 # --- Head ---
 st.set_page_config(
