@@ -73,8 +73,7 @@ st.markdown("These are used to simulate a normal pdf which is shown below. "
 
 st.write("---")
 
-st.write(lr_df["Log Returns"])
-
+st.write(price_df)
 
 
 # ** 3.Visualizations **
