@@ -31,7 +31,7 @@ with col2:
     # Using a container to give it a subtle border
     with st.container(border=False):
         if st.button("📊 Explore DAX Data", use_container_width=True):
-            st.switch_page("pages/1_Losses.py")
+            st.switch_page("pages/1_Explore_Data.py")
             
         if st.button("🛡️ Risk Measures", use_container_width=True):
             st.switch_page("pages/2_Risk_Measures.py")
