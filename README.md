@@ -6,10 +6,13 @@
 
 This project aims to review core concepts of risk management and present them in an educational, interactive way using [Streamlit] - Here you can find dashboard: (https://riskmanagementdashboard-ahcrwbuaieyzxu4hvzryih.streamlit.app/Explore_Data).
 
-## Project Goals
+## Project Overview
+This dashboard serves as a comprehensive review of risk management concepts. Originally conceived during my Master’s studies, it focuses on making abstract financial models tangible through interactive data visualization and modular Python architecture.
 
-- Review and apply key concepts from the Risk Management lecture
-- Develop an interactive educational dashboard using Python and Streamlit
+Key Objectives:
+Theoretical Application: Implementing core concepts from Risk Management lectures into a functional tool.
+
+Engineering: Building a "production-ready" modular codebase with a clear separation between analytical logic and frontend presentation.
 
 ## Features
 
