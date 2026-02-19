@@ -1,38 +1,64 @@
-# Risk Management Dashboard
+# 📊 Risk Management Dashboard
 
-> This project was developed during my master's studies as part of a course on Risk Management.  
-> It serves both as a review of theoretical concepts and an exercise in building interactive dashboards with Streamlit.  
-> This is also my **first application-oriented project** using Streamlit and modular Python structuring.
+This project was developed during my master’s studies as part of a **Risk Management** course.  
+It serves both as a review of theoretical concepts and an exercise in building interactive dashboards with **Streamlit**.  
+It is also my **first application-oriented project** using Streamlit and modular Python structuring.
 
-This project aims to review core concepts of risk management and present them in an educational, interactive way using [Streamlit] - Here you can find dashboard: (https://riskmanagementdashboard-ahcrwbuaieyzxu4hvzryih.streamlit.app/Explore_Data).
+🔗 **Live dashboard:**  
+https://riskmanagementdashboard-ahcrwbuaieyzxu4hvzryih.streamlit.app
 
-## Project Overview
-This dashboard serves as a comprehensive review of risk management concepts. Originally conceived during my Master’s studies, it focuses on making abstract financial models tangible through interactive data visualization and modular Python architecture.
+---
 
-Key Objectives:
-Theoretical Application: Implementing core concepts from Risk Management lectures into a functional tool.
+## 📖 Project Overview
 
-Engineering: Building a "production-ready" modular codebase with a clear separation between analytical logic and frontend presentation.
+The **Risk Management Dashboard** is an educational, interactive application designed to make abstract financial risk models more tangible through visualization and simulation.
 
-## Features
+Originally conceived during coursework, the project focuses on:
 
-- Visual explanation of risk types and measures (e.g. Value at Risk)
-- Integration of example data sets
-- Modular codebase with clear structure for frontend/backend
+- Translating theoretical risk management concepts into a functional analytical tool  
+- Presenting financial risk measures through interactive visualizations  
+- Demonstrating clean, modular Python project structuring  
 
-## Folder Structure
+---
 
-- `Sources/`: Core modules and data processing scripts  
-- `pages/`: Multi-page Streamlit views  
-- `util/`: Helper functions  
-- `data/`: Sample or generated input data  
-- `main.py`: Entry point for running the dashboard  
-- `requirements.txt`: Dependencies  
-- `structure_idea.png`: Initial concept diagram
+## 🎯 Key Objectives
 
-## Getting Started
+- **Theoretical Application**  
+  Implement core concepts from risk management lectures (e.g., Value at Risk)
 
-1. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # or venv\Scripts\activate on Windows
+- **Software Engineering**  
+  Build a modular, maintainable codebase with clear separation between analytical logic and frontend presentation
+
+---
+
+## ⚙️ Features
+
+- Interactive visual explanation of risk types and measures (e.g., **Value at Risk**)  
+- Integration of example financial datasets  
+- Modular backend/frontend architecture  
+- Multi-page Streamlit interface for structured exploration  
+
+---
+
+## 🗂️ Project Structure
+
+RiskManagementDashboard/  
+│  
+├── Sources/              Core analytical modules and data processing  
+├── pages/                Streamlit multi-page views  
+├── util/                 Helper utilities  
+├── data/                 Sample or generated datasets  
+│  
+├── main.py               Application entry point  
+├── requirements.txt      Project dependencies  
+└── structure_idea.png    Initial concept diagram  
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/your-username/risk-management-dashboard.git
+cd risk-management-dashboard
