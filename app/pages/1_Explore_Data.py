@@ -1,3 +1,14 @@
+# app/main.py  (TOP OF FILE)
+
+import sys
+from pathlib import Path
+
+# --- Ensure repo root is on sys.path (works local + Streamlit Cloud) ---
+ROOT = Path(__file__).resolve().parents[1]   # app/.. = repo root
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+# --- Now normal imports are safe everywhere ---
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -7,6 +18,9 @@ import plotly.graph_objects as go
 from scipy import stats
 
 from util.data_utils import get_log_returns
+# from core.risk_core import DataLoader, DataTrafo, RiskModel  # falls du das brauchst
+
+
 
 
 # ** 1.Introduction **

@@ -4,7 +4,7 @@
 > It serves both as a review of theoretical concepts and an exercise in building interactive dashboards with Streamlit.  
 > This is also my **first application-oriented project** using Streamlit and modular Python structuring.
 
-This project aims to review core concepts of risk management and present them in an educational, interactive way using [Streamlit](https://streamlit.io/).
+This project aims to review core concepts of risk management and present them in an educational, interactive way using [Streamlit] - Here you can find dashboard: (https://riskmanagementdashboard-ahcrwbuaieyzxu4hvzryih.streamlit.app/Explore_Data).
 
 ## Project Goals
 

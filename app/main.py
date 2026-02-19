@@ -23,15 +23,4 @@ everything melancholy uncommonly but solicitude inhabiting projection off. Conne
 estimating excellence an to impression.
 """)
 
-# Add a separator line
-st.write("---")
 
-# File uploader for users to upload data
-st.write("Upload your data here:")
-uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
-
-if uploaded_file is not None:
-    # If a file is uploaded, show its contents
-    import pandas as pd
-    df = pd.read_csv(uploaded_file)
-    st.write(df.head())  # Display the first few rows of the uploaded data

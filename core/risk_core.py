@@ -4,8 +4,8 @@ from util.load_packages import st, np, pd
 
 # --- 1. Data Loading ---
 class DataLoader:
-    def __init__(self, source: str):
-        self.source = source
+    def __init__(self, path: str):
+        self.path = path
     
     def load_csv(self) -> pd.DataFrame:
         df = pd.read_csv(self.source)
@@ -27,7 +27,7 @@ class RiskModel:
 
 
 
-loader = DataLoader("data/DAX_index.csv")
-raw_df = loader.load_csv()
+loader_obj = DataLoader("data/DAX_index.csv")
+raw_df = loader_obj.load_csv()
 
 st.dataframe(raw_df)
