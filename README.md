@@ -1,5 +1,4 @@
 # 📊 Risk Management Dashboard
-> ⚠️ **Project Status: Under Construction**
 
 This project was developed during my master’s studies as part of a **Risk Management** course.  
 It serves both as a review of theoretical concepts and an exercise in building interactive dashboards with **Streamlit**.  
