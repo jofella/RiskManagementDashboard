@@ -279,10 +279,9 @@ For a sample of $n$ observations, $\text{VaR}_\alpha$ is estimated by the $k$-th
 $X_{(k)}$ where $k = \lfloor n\alpha \rfloor$. The count of observations below $X_{(k)}$ follows
 $\text{Bin}(n, \alpha)$, so a $(1-\gamma)$ confidence interval for the *index* $k$ is:
 
-$$[k_l,\, k_u] = \left[\text{Bin}_{n,\alpha}^{-1}\!\left(\tfrac{\gamma}{2}\right),\;
-\text{Bin}_{n,\alpha}^{-1}\!\left(1-\tfrac{\gamma}{2}\right)\right]$$
+$$[k_l,\, k_u] = \left[\mathrm{Bin}_{n,\alpha}^{-1}\!\left(\frac{\gamma}{2}\right),\quad \mathrm{Bin}_{n,\alpha}^{-1}\!\left(1-\frac{\gamma}{2}\right)\right]$$
 
-and the CI for $\text{VaR}_\alpha$ is simply $[X_{(k_l)},\, X_{(k_u)}]$.
+and the CI for $\mathrm{VaR}_\alpha$ is simply $[X_{(k_l)},\, X_{(k_u)}]$.
 """)
 
 ci_level = st.select_slider("Confidence interval level:", options=[0.90, 0.95, 0.99], value=0.95)
@@ -354,12 +353,11 @@ st.header("5. Bootstrap Confidence Intervals")
 st.markdown(r"""
 The **bootstrap** provides an alternative, non-parametric approach to CI estimation.
 Rather than relying on distributional results for order statistics, it approximates the
-sampling distribution of $\widehat{\text{VaR}}_\alpha$ directly:
+sampling distribution of $\widehat{\mathrm{VaR}}_\alpha$ directly:
 
 1. Draw $B$ bootstrap samples $(L^*_1, \ldots, L^*_n)$ by **sampling with replacement** from the window
-2. Compute $\widehat{\text{VaR}}_\alpha^{*(b)}$ for each resample $b = 1, \ldots, B$
-3. The bootstrap CI is $\left[\widehat{\text{VaR}}^*_{(\gamma/2)},\;
-   \widehat{\text{VaR}}^*_{(1-\gamma/2)}\right]$ — the empirical percentiles of the $B$ estimates
+2. Compute $\widehat{\mathrm{VaR}}_\alpha^{*(b)}$ for each resample $b = 1, \ldots, B$
+3. The bootstrap CI is $\left[\widehat{\mathrm{VaR}}^*_{(\gamma/2)},\;\widehat{\mathrm{VaR}}^*_{(1-\gamma/2)}\right]$ — the empirical percentiles of the $B$ estimates
 
 The bootstrap is more flexible than the order statistics approach: it naturally extends
 to **any** risk measure (e.g. ES) without requiring closed-form distributional results.
