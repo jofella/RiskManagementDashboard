@@ -77,11 +77,13 @@ def compute_risk_factors(data):
     return Z_n, X_n
 
 
+@st.cache_data
 def compute_nonlinear_losses(X_n, alpha_weights, data):
     weighted_port = alpha_weights * data
     return np.array([-np.dot(weighted_port[n, :], np.exp(X_n[n, :]) - 1) for n in range(len(X_n))])
 
 
+@st.cache_data
 def compute_linearized_losses(X_n, alpha_weights, data):
     weighted_port = alpha_weights * data
     return np.array([-np.dot(weighted_port[n, :], X_n[n, :]) for n in range(len(X_n))])

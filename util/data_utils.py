@@ -17,5 +17,6 @@ def load_dax_companies():
     return np.genfromtxt(path, usecols=(1, 2, 3, 4, 5), delimiter=",", skip_header=1)
 
 
+@st.cache_data
 def get_log_returns(data):
     return np.diff(np.log(data))

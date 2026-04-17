@@ -109,16 +109,20 @@ upper-order statistics used (the **tail threshold**).
 - The **Hill plot** shows $\hat{\xi}_k$ vs $k$; a stable plateau suggests a reliable estimate
 """)
 
+@st.cache_data
+def compute_hill(losses):
+    pos = np.sort(losses[losses > 0])[::-1]
+    k_min, k_max = 10, min(500, len(pos) - 1)
+    k_vals = np.arange(k_min, k_max + 1)
+    estimates = np.array([np.mean(np.log(pos[:k] / pos[k])) for k in k_vals])
+    return k_vals, estimates, k_min, k_max
+
+
 # Only use positive losses (right tail = actual losses)
 pos_losses = np.sort(losses[losses > 0])[::-1]  # descending order
 n_pos = len(pos_losses)
 
-k_min, k_max = 10, min(500, n_pos - 1)
-k_values = np.arange(k_min, k_max + 1)
-hill_estimates = np.array([
-    np.mean(np.log(pos_losses[:k] / pos_losses[k]))
-    for k in k_values
-])
+k_values, hill_estimates, k_min, k_max = compute_hill(losses)
 
 fig_hill = go.Figure()
 fig_hill.add_trace(go.Scatter(
@@ -165,21 +169,18 @@ as the threshold for the POT method.
 """)
 
 # Compute MEP
-sorted_pos = np.sort(losses[losses > 0])
-u_grid = np.percentile(sorted_pos, np.linspace(50, 98, 80))  # thresholds from median to 98th pct
-me_vals = []
-n_exceedances_me = []
-for u in u_grid:
-    exceedances_u = losses[losses > u] - u
-    if len(exceedances_u) >= 5:
-        me_vals.append(np.mean(exceedances_u))
-        n_exceedances_me.append(len(exceedances_u))
-    else:
-        me_vals.append(np.nan)
-        n_exceedances_me.append(0)
+@st.cache_data
+def compute_mep(losses):
+    u_grid = np.percentile(losses[losses > 0], np.linspace(50, 98, 80))
+    me = []
+    for u in u_grid:
+        exc = losses[losses > u] - u
+        me.append(np.mean(exc) if len(exc) >= 5 else np.nan)
+    me = np.array(me)
+    return u_grid, me, ~np.isnan(me)
 
-me_vals = np.array(me_vals)
-valid_me = ~np.isnan(me_vals)
+
+u_grid, me_vals, valid_me = compute_mep(losses)
 
 fig_mep = go.Figure()
 fig_mep.add_trace(go.Scatter(

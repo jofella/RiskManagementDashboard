@@ -12,6 +12,7 @@ from util.data_utils import load_dax_index, get_log_returns
 WINDOW = 252  # 1 trading year
 
 
+@st.cache_data
 def _rolling_var_normal(losses, alpha, window=WINDOW):
     var = np.full(len(losses), np.nan)
     for t in range(window, len(losses)):
@@ -22,6 +23,7 @@ def _rolling_var_normal(losses, alpha, window=WINDOW):
     return var
 
 
+@st.cache_data
 def _rolling_var_hist(losses, alpha, window=WINDOW):
     var = np.full(len(losses), np.nan)
     for t in range(window, len(losses)):

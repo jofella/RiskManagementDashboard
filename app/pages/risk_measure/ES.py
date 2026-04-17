@@ -12,6 +12,24 @@ from util.data_utils import load_dax_index, get_log_returns
 WINDOW = 252
 
 
+@st.cache_data
+def _rolling_var_normal(losses, alpha, window=WINDOW):
+    var = np.full(len(losses), np.nan)
+    for t in range(window, len(losses)):
+        w = losses[t - window:t]
+        var[t] = np.mean(w) + np.std(w, ddof=1) * stats.norm.ppf(alpha)
+    return var
+
+
+@st.cache_data
+def _rolling_var_hist(losses, alpha, window=WINDOW):
+    var = np.full(len(losses), np.nan)
+    for t in range(window, len(losses)):
+        var[t] = np.percentile(losses[t - window:t], alpha * 100)
+    return var
+
+
+@st.cache_data
 def _rolling_es_normal(losses, alpha, window=WINDOW):
     es = np.full(len(losses), np.nan)
     for t in range(window, len(losses)):
@@ -23,6 +41,7 @@ def _rolling_es_normal(losses, alpha, window=WINDOW):
     return es
 
 
+@st.cache_data
 def _rolling_es_hist(losses, alpha, window=WINDOW):
     es = np.full(len(losses), np.nan)
     for t in range(window, len(losses)):
@@ -86,18 +105,12 @@ def render():
     es_static = mu_full + sigma_full * stats.norm.pdf(stats.norm.ppf(alpha)) / (1 - alpha)
 
     if method == "Normal (parametric)":
-        var_rolling = np.array([
-            np.mean(losses[max(0, t-WINDOW):t]) + np.std(losses[max(0, t-WINDOW):t], ddof=1) * stats.norm.ppf(alpha)
-            if t >= WINDOW else np.nan for t in range(T)
-        ])
+        var_rolling = _rolling_var_normal(losses, alpha)
         es_rolling = _rolling_es_normal(losses, alpha)
         method_label = "Normal (parametric)"
     else:
+        var_rolling = _rolling_var_hist(losses, alpha)
         es_rolling = _rolling_es_hist(losses, alpha)
-        var_rolling = np.array([
-            np.percentile(losses[t-WINDOW:t], alpha * 100) if t >= WINDOW else np.nan
-            for t in range(T)
-        ])
         method_label = "Historical Simulation"
 
     exceedances_var = np.where((~np.isnan(var_rolling)) & (losses > var_rolling))[0]
