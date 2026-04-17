@@ -1,237 +1,134 @@
-# app/main.py  (TOP OF FILE)
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-import sys
-from pathlib import Path
-
-# --- Ensure repo root is on sys.path (works local + Streamlit Cloud) ---
-ROOT = Path(__file__).resolve().parents[1]   # app/.. = repo root
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-# --- Now normal imports are safe everywhere ---
-import streamlit as st
 import numpy as np
 import pandas as pd
-import os
 import plotly.express as px
 import plotly.graph_objects as go
+import streamlit as st
 from scipy import stats
 
-from util.data_utils import get_log_returns
-# from core.risk_core import DataLoader, DataTrafo, RiskModel  # falls du das brauchst
+from util.data_utils import load_dax_index, get_log_returns
 
-
-
-
-# ** 1.Introduction **
+# --- HEADER ---
 st.title("📊 Explore Data")
-
 st.markdown("""
-This dashboard helps analyze **log returns**, compare them with a **normal distribution**, 
-and simulate returns using Monte Carlo methods.
+This section analyses **log returns** of the DAX index, compares them with a **normal distribution**,
+and simulates a price process using Monte Carlo methods.
 """)
-
 st.write("---")
 
-
-# ** 2.Data Loading **
+# 1. Load Data
 st.header("1. Load Data")
-st.write("We will use historical data to compute log returns and compare them with simulations.")
+st.write("We use DAX daily closing prices (2000–2024) to compute log returns.")
 
-st.write(f"Looking for file at: {os.path.abspath('..Risk_App/data/DAX_index.csv')}")
-
-path = r'C:\Users\josef\Documents\GitHub\Master_CAU\Semester_3\Risk Management\Risk_App\data\DAX_index.csv'
-data = np.genfromtxt(path, usecols=(1), delimiter=",", skip_header=1)
-
-
-## Get log-returns --
+data = load_dax_index()
 lr = get_log_returns(data)
 
 mu = np.mean(lr)
 sigma = np.std(lr)
 
-# Get norm. distr
-x_rand_range = np.linspace(min(lr), max(lr), 100)
-norm_pdf = stats.norm.pdf(x_rand_range, loc=mu, scale=sigma)
+st.success(f"Loaded **{len(data):,}** daily price observations → **{len(lr):,}** log returns.")
+st.write("---")
 
-bin_width = (max(lr) - min(lr)) / 1000
-norm_pdf_scaled = norm_pdf * len(lr) * bin_width # Scale normal PDF (match hist. height)
+# 2. Summary Statistics
+st.header("2. Summary Statistics")
 
-# MC-simulation for synthetic log returns
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Mean (μ)", f"{mu:.6f}")
+col2.metric("Std Dev (σ)", f"{sigma:.6f}")
+col3.metric("Skewness", f"{stats.skew(lr):.4f}")
+col4.metric("Excess Kurtosis", f"{stats.kurtosis(lr):.4f}")
+
+st.markdown("""
+> **Excess kurtosis > 0** is the fingerprint of **fat tails** — extreme returns occur more often
+> than a normal distribution predicts. This is the core motivation for advanced risk models.
+""")
+st.write("---")
+
+# 3. Log Returns Over Time
+st.header("3. Log Returns Over Time")
+
 sim_returns = np.random.normal(mu, sigma, len(lr))
+S_t = data[0] * np.exp(np.cumsum(sim_returns))
 
-# Simulate price process
-S_0 = data[0]
-S_t = S_0 * np.exp(np.cumsum(sim_returns))
-
-# Get DataFrames (plotly)
 lr_df = pd.DataFrame({"Index": range(len(lr)), "Log Returns": lr})
 sim_df = pd.DataFrame({"Index": range(len(sim_returns)), "Simulated Log Returns": sim_returns})
 price_df = pd.DataFrame({"Index": range(len(data)), "Real DAX": data})
 sim_price_df = pd.DataFrame({"Index": range(len(S_t)), "Simulated DAX": S_t})
 
-
-
-st.write("---")
-
-
-# ** 2.Key Metrics **
-st.header("2. Summary Statistics")
-st.write("Below the key moments of your log-retruns:")
-
-mu = np.mean(lr)
-sigma = np.std(lr)
-
-col1, col2 = st.columns(2)
-with col1:
-    st.metric(label="Mean (μ)", value=f"{mu:.6f}")
-with col2:
-    st.metric(label="Standard Deviation (σ)", value=f"{sigma:.6f}")
-
-st.markdown("These are used to simulate a normal pdf which is shown below. "
-            "Here we use 'numpy', but any other statstical package can be used as well.")
-
-
-st.write("---")
-
-st.write(price_df)
-
-
-# ** 3.Visualizations **
-st.header("3. Log Returns Over Time")
-
 fig = go.Figure()
-
 fig.add_trace(go.Scatter(
-    x=lr_df["Index"], 
-    y=lr_df["Log Returns"], 
-    mode="lines", 
-    name="Empirical Log Returns",
-    line=dict(color="light blue")
+    x=lr_df["Index"], y=lr_df["Log Returns"],
+    mode="lines", name="Empirical", line=dict(color="steelblue")
 ))
-
-# Overlay sim lr
 fig.add_trace(go.Scatter(
-    x=sim_df["Index"], 
-    y=sim_df["Simulated Log Returns"], 
-    mode="lines", 
-    name="Simulated Log Returns",
-    line=dict(color="red", dash="dash")
+    x=sim_df["Index"], y=sim_df["Simulated Log Returns"],
+    mode="lines", name="Simulated (Normal)", line=dict(color="crimson", dash="dash")
 ))
-
 fig.update_layout(
-    xaxis_title="Index",
-    yaxis_title="Log Returns",
-    legend=dict(x=0, y=1)
+    xaxis_title="Trading Day", yaxis_title="Log Return",
+    legend=dict(x=0, y=1), xaxis=dict(showgrid=True), yaxis=dict(showgrid=True)
 )
-
-st.plotly_chart(fig)
-
+st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("""
-    <p style="font-size:20px;">
-    <b>Findings:</b><br>
-    - Simulated returns appear to be more "ordered". Basically a stationary time series. <br>
-    - The empirical returns are much more random in a sense, that we have large spikes not "covered" by the normal returns.<br>
-    -> This indicates the good old story of the normal dist. <b> underestimating </b> extreme events. 
-    </p>
-    """, unsafe_allow_html=True)
-
-
+**Findings:** Empirical returns show **volatility clustering** (calm periods followed by turbulent ones)
+and extreme spikes not present in the stationary normal simulation — motivation for GARCH-type models.
+""")
 st.write("---")
 
-
-# **4.Histogram vs Normal Distribution**
+# 4. Distribution of Log Returns
 st.header("4. Distribution of Log Returns")
 
-num_bins = st.slider("Select Number of Bins:",
-                     min_value=20,
-                     max_value=500,
-                     value=250,
-                     step=10)
+x_range = np.linspace(min(lr), max(lr), 300)
+norm_pdf = stats.norm.pdf(x_range, loc=mu, scale=sigma)
 
-fig = px.histogram(lr_df, x="Log Returns",
-                   nbins=num_bins,
-                   histnorm='probability density'
-                   )
+num_bins = st.slider("Number of bins:", 20, 500, 250, step=10)
 
-# Overlay Normal PDF
+fig = px.histogram(
+    lr_df, x="Log Returns", nbins=num_bins,
+    histnorm="probability density",
+    color_discrete_sequence=["steelblue"],
+    opacity=0.7
+)
 fig.add_trace(go.Scatter(
-    x=x_rand_range,
-    y=norm_pdf_scaled,  # Use scaled PDF
-    mode="lines",
-    name="Normal PDF",
-    line=dict(color="red", width=2)
+    x=x_range, y=norm_pdf,
+    mode="lines", name="Normal PDF", line=dict(color="crimson", width=2)
 ))
-
-st.plotly_chart(fig)
+fig.update_layout(xaxis_title="Log Return", yaxis_title="Density")
+st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("""
-    <p style="font-size:20px;">
-    <b>Findings:</b><br>
-    - Similar story than in 3: Especially in the tails the normal distribution doesn't seem to be appropriate for modeling returns.
-    The ones observed in the markets do behave differently.
-    </p>
-    """, unsafe_allow_html=True)
-
-
-
+**Findings:** The empirical distribution has **heavier tails** than the fitted normal —
+extreme losses occur far more frequently than the bell curve predicts.
+This motivates **VaR, ES, and Extreme Value Theory** as proper risk tools.
+""")
 st.write("---")
 
+# 5. Monte Carlo Price Simulation
+st.header("5. Monte Carlo Price Simulation")
 
-
-# **5.Simulate Process**
-st.header("5. Simulate Price Process")
+st.info("This plot changes on every re-load since the simulated path is random.", icon="ℹ️")
 
 fig = go.Figure()
-
-# Plot Real DAX Prices
 fig.add_trace(go.Scatter(
-    x=price_df["Index"], 
-    y=price_df["Real DAX"], 
-    mode="lines",
-    name="Real DAX",
-    line=dict(color="light blue")
+    x=price_df["Index"], y=price_df["Real DAX"],
+    mode="lines", name="Real DAX", line=dict(color="steelblue")
 ))
-
-# Overlay Simulated Prices
 fig.add_trace(go.Scatter(
-    x=sim_price_df["Index"], 
-    y=sim_price_df["Simulated DAX"], 
-    mode="lines",
-    name="Simulated DAX",
-    line=dict(color="red", dash="dash")
+    x=sim_price_df["Index"], y=sim_price_df["Simulated DAX"],
+    mode="lines", name="Simulated (GBM)", line=dict(color="crimson", dash="dash")
 ))
-
 fig.update_layout(
-    xaxis_title="Index",
-    yaxis_title="DAX Price",
-    legend=dict(x=0, y=1)
+    xaxis_title="Trading Day", yaxis_title="DAX Level",
+    xaxis=dict(showgrid=True), yaxis=dict(showgrid=True)
 )
-
-st.plotly_chart(fig)
-
+st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("""
-    <p style="font-size:20px;">
-    <b>Findings:</b><br>
-    - Attention: This will change with every re-load! <br>
-    - Real DAX prices follow an upward drift. Its influenced by actual market conditions like eco. growth or inflation. <br>
-    - Simulated DAX is much more volatile due to constant (stationary) volatilty. Much larger fluctuations, 
-    beacuse here we dont account for different vola periods. <br>
-    - Simulated process follows exponential growth path, massively overestimates vola 
-    --> Lacks mean-reverting behavior. (Improvement: GARCH model)
-    </p>
-    """, unsafe_allow_html=True)
-
-
-# st.write("---")
-
-# # **5. Conclusions**
-# st.header("5. Key Insights")
-
-# st.markdown("""
-# - The log returns appear **centered around zero** with some skewness.
-# - The **simulated normal distribution** provides a baseline for risk comparison.
-# - Future work: Try using **GARCH models** to estimate volatility! 🔥
-# """)
+**Findings:**
+- The **simulated path** (Geometric Brownian Motion) uses constant volatility — unrealistic.
+- The **real DAX** shows heteroscedasticity: volatility surges during crises (2008, 2020).
+- Improvement: **GARCH(1,1)** allows time-varying volatility to better capture market dynamics.
+""")

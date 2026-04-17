@@ -1,223 +1,161 @@
-from util.load_packages import st, np, pd, os, px, go, stats
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+import streamlit as st
+
+from util.data_utils import load_dax_companies
 
 st.title("📉 Losses")
 st.markdown("""
 Why do we need risk management? Financial institutions like banks are subject to losses. Extreme
-large losses may lead to bancruptcy and may also threaten third parties. In order to prevent this
-those institutions accumulate <b>buffer capital</b>. Three main questions arise: <br>
+large losses may lead to bankruptcy and may also threaten third parties. In order to prevent this,
+those institutions accumulate **buffer capital**. Three main questions arise:
 
-- How to quantify risk? <br>
-- How to measure risk? <br>
-- What capital reserve is needed in view of this risk? <br>
+- How to **quantify** risk?
+- How to **measure** risk?
+- What **capital reserve** is needed in view of this risk?
 
-Following passages will introduce the basics for capturing <b>market risk</b>.
-""", unsafe_allow_html=True)
-
-
-st.write("---")
-
-# ** Load DAX Companies Data **
-@st.cache_data
-def load_dax_data(path):
-    """Load DAX stock data from CSV."""
-    return np.genfromtxt(path, usecols=(1,2,3,4,5), delimiter=",", skip_header=1)
-
-path = r'C:\Users\josef\Documents\GitHub\Master_CAU\Semester_3\Risk Management\Risk_App\data\DAX_companies.csv'
-data_dax_comp = load_dax_data(path)
-
-
-
-# ** Loss operator **
-st.header("1. Loss Operator")
-
-st.markdown("""
-### 1.1. Understanding Risk Factors and the Loss Operator  
-
-When looking at a (stock) portfolio in terms of risk, we chose **log stock prices** as  
-<b>risk factors</b>. The risk factors are defined as:  
-
-$$Z_{n,i} := \log(S_{n,i})$$  
-
-Why risk factors? The idea is to look at the **key drivers of uncertainty** in the financial portfolio.  
-
-Based on these, the **risk factor changes** are computed as:  
-
-$$X_{n+1} = Z_{n+1} - Z_n$$  
-
-These values serve as inputs for our **loss operator**, a function that calculates portfolio losses.  
-The **advantage** of this approach is that we **separate risk factors from the portfolio structure**,  
-making the modeling process **more flexible and less complicated**.  
-
----
-
-### 1.2. The Loss Operator  
-
-The loss in period \( n+1 \) is a function of \( X_{n+1} \) and known quantities at \( t_n \).  
-Specifically, we define the **loss operator** as:
-
-$$
-L_{n+1} = -(V_{n+1} - V_n) = - f_{n+1}(Z_n + X_{n+1}) + f_n(Z_n) =: \ell_{[n]}(X_{n+1})
-$$
-
-The function L is called the **loss operator**, which **randomly changes** over time. <br>
-
-""", unsafe_allow_html=True)
-
-st.write("---")
-
-st.write("""
-Below you can see set your desired portfolio weights and see how it affects both: portfolio value and losses.
+The following sections introduce the basics for capturing **market risk**.
 """)
-
-col1, col2, col3, col4, col5 = st.columns(5)
-
-with col1:
-    w1 = st.number_input("Asset 1", min_value=0, max_value=30, value=4, step=1)
-with col2:
-    w2 = st.number_input("Asset 2", min_value=0, max_value=30, value=8, step=1)
-with col3:
-    w3 = st.number_input("Asset 3", min_value=0, max_value=30, value=15, step=1)
-with col4:
-    w4 = st.number_input("Asset 4", min_value=0, max_value=30, value=16, step=1)
-with col5:
-    w5 = st.number_input("Asset 5", min_value=0, max_value=30, value=23, step=1)
-
-alpha_weights = np.array([w1, w2, w3, w4, w5])
+st.write("---")
 
 
-# ** Computation **
+# Load data
+@st.cache_data
+def load_data():
+    return load_dax_companies()
 
-# Risk factors
+data_dax_comp = load_data()
+
+STOCK_NAMES = ["BMW", "SAP", "Volkswagen", "Continental", "Siemens"]
+
+# 1. Loss Operator
+st.header("1. Loss Operator")
+st.markdown("""
+### 1.1 Risk Factors and the Loss Operator
+
+When analysing a stock portfolio, we choose **log stock prices** as **risk factors**:
+
+$$Z_{n,i} := \\log(S_{n,i})$$
+
+The **risk factor changes** (log returns) are:
+
+$$X_{n+1} = Z_{n+1} - Z_n$$
+
+Based on these, the **loss operator** computes portfolio losses as:
+
+$$L_{n+1} = -(V_{n+1} - V_n) =: \\ell_{[n]}(X_{n+1})$$
+
+The key advantage: we **separate the risk factors from the portfolio structure**,
+making the modelling process more flexible.
+""")
+st.write("---")
+
+# Portfolio weights
+st.subheader("Portfolio Weights")
+st.write("Set the number of shares held for each stock:")
+
+cols = st.columns(5)
+defaults = [4, 8, 15, 16, 23]
+weights = []
+for col, name, default in zip(cols, STOCK_NAMES, defaults):
+    with col:
+        weights.append(st.number_input(name, min_value=0, max_value=50, value=default, step=1))
+
+alpha_weights = np.array(weights)
+
+
+# Compute risk factors and losses
 @st.cache_data
 def compute_risk_factors(data):
-    """Compute log stock prices (Z_n) and log-returns (X_n)."""
     Z_n = np.log(data)
-    X_n = np.diff(Z_n, axis=0)  # Compute log-return changes
+    X_n = np.diff(Z_n, axis=0)
     return Z_n, X_n
 
-Z_n, X_n = compute_risk_factors(data_dax_comp)
 
-# Weights
-weighted_port = alpha_weights * data_dax_comp
-
-# Compute Portfolio Value (V_n)
-V_n = np.dot(np.exp(Z_n), alpha_weights)
-
-# Losses
-@st.cache_data
 def compute_nonlinear_losses(X_n, alpha_weights, data):
-    """Compute the nonlinear portfolio losses."""
     weighted_port = alpha_weights * data
-    
-    def l(n, x):
-        return -np.dot(weighted_port[n, :], np.exp(x[n, :]) - 1)
-    
-    return np.array([l(n, X_n) for n in range(len(X_n))])
+    return np.array([-np.dot(weighted_port[n, :], np.exp(X_n[n, :]) - 1) for n in range(len(X_n))])
 
-@st.cache_data
+
 def compute_linearized_losses(X_n, alpha_weights, data):
-    """Compute the linearized (first-order Taylor) portfolio losses."""
     weighted_port = alpha_weights * data
-    
-    def l_delta(n, x):
-        return -np.dot(weighted_port[n, :], x[n, :])
-    
-    return np.array([l_delta(n, X_n) for n in range(len(X_n))])
+    return np.array([-np.dot(weighted_port[n, :], X_n[n, :]) for n in range(len(X_n))])
 
+
+Z_n, X_n = compute_risk_factors(data_dax_comp)
+V_n = np.dot(np.exp(Z_n), alpha_weights)
 losses = compute_nonlinear_losses(X_n, alpha_weights, data_dax_comp)
 delta_losses = compute_linearized_losses(X_n, alpha_weights, data_dax_comp)
 
-# Convert to DataFrames
 loss_df = pd.DataFrame({"Time": np.arange(len(losses)), "Losses": losses})
 delta_loss_df = pd.DataFrame({"Time": np.arange(len(delta_losses)), "Losses": delta_losses})
 
+st.write("---")
 
-
-
-# ** DAX portfolio **
+# Portfolio value chart
+st.subheader("Portfolio Value Over Time")
 fig = go.Figure()
-
 fig.add_trace(go.Scatter(
-    x=np.arange(len(V_n)),
-    y=V_n,
-    mode="lines",
-    name="Simulated DAX Portfolio",
-    line=dict(color="light blue")
+    x=np.arange(len(V_n)), y=V_n,
+    mode="lines", name="Portfolio Value", line=dict(color="steelblue")
 ))
-
 fig.update_layout(
-    title="DAX 5-stock Portfolio from 2000-Today",
-    xaxis_title="Time (Days)",
-    yaxis_title="Portfolio Value",
-    xaxis=dict(showgrid=True),
-    yaxis=dict(showgrid=True)
+    title="DAX 5-Stock Portfolio (2000–Today)",
+    xaxis_title="Time (Days)", yaxis_title="Portfolio Value (€)",
+    xaxis=dict(showgrid=True), yaxis=dict(showgrid=True)
 )
+st.plotly_chart(fig, use_container_width=True)
 
-st.plotly_chart(fig)
-
-
-
-# ** Losses **
-fig = px.line(loss_df, x="Time", y="Losses",
-              title="Portfolio Losses Over Time",
-              labels={"Losses": "Loss", "Time": "Time (Days)"},
-              line_shape="linear")
-
-st.plotly_chart(fig)
-
+# Portfolio losses chart
+st.subheader("Portfolio Losses Over Time")
+fig = px.line(
+    loss_df, x="Time", y="Losses",
+    labels={"Losses": "Loss (€)", "Time": "Time (Days)"},
+    color_discrete_sequence=["steelblue"]
+)
+st.plotly_chart(fig, use_container_width=True)
 
 st.write("---")
+
+# 1.3 Linearized Loss
+st.header("2. Linearized Loss Operator")
+st.markdown("""
+### 1.2 Linearization via Taylor Expansion
+
+The loss operator is generally **nonlinear** due to the exponential function.
+A **first-order Taylor expansion** gives the **linearized loss**:
+
+$$\\tilde{L}_{n+1} = -\\sum_i \\alpha_i S_{n,i} \\cdot X_{n+1,i} = -\\mathbf{w}_n^\\top X_{n+1}$$
+
+where $\\mathbf{w}_n = (\\alpha_i S_{n,i})_i$ are the **euro-denominated weights**.
+
+This approximation is accurate for small risk factor changes and is the basis of the
+**Variance-Covariance Method (VCM)** used in the next section.
+""")
+
+fig = go.Figure()
+fig.add_trace(go.Scatter(
+    x=loss_df["Time"], y=loss_df["Losses"],
+    mode="lines", name="Nonlinear Loss", line=dict(color="steelblue")
+))
+fig.add_trace(go.Scatter(
+    x=delta_loss_df["Time"], y=delta_loss_df["Losses"],
+    mode="lines", name="Linearized Loss (δ)", line=dict(color="crimson", dash="dash")
+))
+fig.update_layout(
+    title="Nonlinear vs. Linearized Portfolio Losses",
+    xaxis_title="Time (Days)", yaxis_title="Loss (€)",
+    legend=dict(x=0, y=1), xaxis=dict(showgrid=True), yaxis=dict(showgrid=True)
+)
+st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("""
-### 1.3. Linearized Loss Operator  
-
-One major challenge with the **loss operator** is that it is generally **nonlinear** due to the function \( f_n \).  
-Nonlinearities can make risk modeling more complex, requiring advanced numerical methods for estimation.  
-
-To simplify computations and make risk estimation more tractable, we apply a **first-order Taylor expansion** to approximate losses **linearly**.  
-This approximation allows us to efficiently analyze **small risk factor changes** while maintaining accuracy.
-
-""", unsafe_allow_html=True)
-
-
-
-@st.cache_data
-def plot_losses_chart(loss_df, delta_loss_df):
-    """Generates a Plotly figure comparing nonlinear & linearized losses."""
-    fig = go.Figure()
-
-    # Nonlinear Losses
-    fig.add_trace(go.Scatter(
-        x=loss_df["Time"], 
-        y=loss_df["Losses"], 
-        mode="lines", 
-        name="Nonlinear Losses", 
-        line=dict(color="lightblue")
-    ))
-
-    # Linearized Losses
-    fig.add_trace(go.Scatter(
-        x=delta_loss_df["Time"], 
-        y=delta_loss_df["Losses"], 
-        mode="lines", 
-        name="Linearized Losses", 
-        line=dict(color="crimson", dash="dash")
-    ))
-
-    fig.update_layout(
-        title="Comparison of Nonlinear and Linearized Portfolio Losses",
-        xaxis_title="Time (Days)",
-        yaxis_title="Loss",
-        legend=dict(x=0, y=1),
-        xaxis=dict(showgrid=True),
-        yaxis=dict(showgrid=True)
-    )
-
-    return fig
-
-fig = plot_losses_chart(loss_df, delta_loss_df)
-st.plotly_chart(fig)
-
-
-st.write("---")
-
+**Findings:** The linearized approximation closely tracks the true nonlinear loss for typical
+daily moves. During extreme events (large $X_{n+1}$), the approximation slightly underestimates losses —
+a known limitation of first-order linearization.
+""")

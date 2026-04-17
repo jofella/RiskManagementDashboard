@@ -1,32 +1,30 @@
-from util.load_packages import st, np, pd, os, px, go, stats
-from util.data_utils import load_single_stock_data
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import streamlit as st
+
+from risk_measure import standard_deviation, VaR, ES
 
 st.title("📏 Measuring Risk")
-
 st.markdown("""
-We have now established a method to quantify our risk: **Losses**.  
-The next step is to measure risk and ultimately determine the **required buffer capital**.  
-""", unsafe_allow_html=True)
+We have established a way to **quantify** risk through losses.
+The next step is to **measure** risk and determine the required **buffer capital**.
 
-# ** 1.Load data (once and reference on it) **
-path = r'C:\Users\josef\Documents\GitHub\Master_CAU\Semester_3\Risk Management\Risk_App\data\DAX_companies.csv'
+Select a risk measure below to explore its definition, properties, and application to the DAX portfolio.
+""")
+st.write("---")
 
-# Load data and store it in session state
-if "data_dax_comp" not in st.session_state:
-    st.session_state.data = load_single_stock_data(path)
+method = st.radio(
+    "Choose a risk measure:",
+    ["Standard Deviation", "Value at Risk (VaR)", "Expected Shortfall (ES)"],
+    horizontal=True
+)
+st.write("---")
 
-
-
-# ** 2.Select desired risk measure **
-method_section = st.radio("Choose a risk measure:", ["Standard Deviation", "Value at Risk", "Expected Shortfall"])
-
-# Dynamically import and execute the content based on selection
-if method_section == "Standard Deviation":
-    # Dynamically load normal_distribution.py content
-    import pages.risk_measure.standard_deviation
-elif method_section == "Value at Risk":
-    # Dynamically load poisson_distribution.py content
-    import pages.risk_measure.VaR
-elif method_section == "Expected Shortfall":
-    # Dynamically load other_methods.py content
-    import pages.risk_measure.ES
+if method == "Standard Deviation":
+    standard_deviation.render()
+elif method == "Value at Risk (VaR)":
+    VaR.render()
+elif method == "Expected Shortfall (ES)":
+    ES.render()

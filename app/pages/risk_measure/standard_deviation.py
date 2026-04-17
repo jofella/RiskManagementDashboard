@@ -1,114 +1,86 @@
-from util.load_packages import st, np, pd, os, px, go, stats
-from util.data_utils import get_log_returns
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
-# Normal Distribution section content
-st.markdown("""
-### 1. Standard Deviation  
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
 
-A **traditional approach** to measuring risk is based on the **standard deviation of the loss**.  
-It quantifies the typical deviation of losses from their expected value, providing a **measure of risk volatility**:
-
-$$
-\\varrho = c \\sqrt{\\operatorname{Var}_n(L_{n+1})} = c \\sqrt{ \\int x^2 P^L(dx) - \\left( \\int x P^L(dx) \\right)^2 }
-$$
-
-where \( c > 0 \) is a constant factor, possibly adjusted for the mean by adding \( E_n(L_{n+1}) \) if necessary.
+from util.data_utils import load_dax_index, get_log_returns
 
 
-### Benefits of Standard Deviation as a Risk Measure
-✔ **Simple & Easy to Estimate** – Standard deviation is a widely used and well-understood metric.  
-✔ **Symmetric Risk Interpretation** – It treats **profits and losses equally**, making it useful for normal distributions.  
-✔ **Provides a General Risk Indicator** – Helps assess **volatility and overall dispersion of losses**.  
+def render():
+    st.markdown("""
+    ### Standard Deviation as a Risk Measure
 
+    A classical approach to measuring risk uses the **standard deviation of the loss distribution**:
 
-### Limitations of Standard Deviation for Risk Assessment  
-🚨 **Fails to Capture Tail Risk** – It does not focus on extreme losses, which are **critical for risk management**.  
-🚨 **Assumes a Symmetric Distribution** – In financial markets, loss distributions are often **skewed** and **fat-tailed**.  
-🚨 **Not Ideal for Heavy-Tailed Risks** – If losses have **infinite variance**, standard deviation **is not well-defined**.  
+    $$\\varrho(L) = E_n(L_{n+1}) + c \\cdot \\sqrt{\\operatorname{Var}_n(L_{n+1})}$$
 
-### Key Takeaway  
-While **standard deviation is useful as a general risk measure**, it may be **insufficient** for capturing extreme financial risks.  
-For more robust risk assessment, **Value at Risk (VaR) and Expected Shortfall (ES)** are often preferred.
+    where $c > 0$ is a **risk-appetite parameter** (e.g. $c = 1.64$ corresponds to the 95% normal quantile).
 
-""", unsafe_allow_html=True)
+    For a single stock position with log-normally distributed returns $X \\sim \\mathcal{N}(\\mu, \\sigma^2)$,
+    the conditional moments of the loss $L = -S_n(e^X - 1)$ are:
 
-st.write("---")
+    $$E_n(L_{n+1}) = S_n \\left(1 - e^{\\mu + \\sigma^2/2}\\right)$$
+    $$\\operatorname{Var}_n(L_{n+1}) = S_n^2 \\left(e^{\\sigma^2} - 1\\right) e^{2\\mu + \\sigma^2}$$
+    """)
 
+    with st.expander("Pros & Cons of Standard Deviation"):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **Advantages**
+            - Simple and well-understood
+            - Easy to estimate from data
+            - Useful as a general volatility indicator
+            """)
+        with col2:
+            st.markdown("""
+            **Limitations**
+            - Symmetric: treats gains and losses equally
+            - Misses tail risk — does not focus on extreme losses
+            - Undefined for heavy-tailed distributions with infinite variance
+            """)
 
-# **1.Load data **
-data = st.session_state.data
+    st.write("---")
 
+    data = load_dax_index()
+    lr = get_log_returns(data)
+    mu = np.mean(lr)
+    sigma = np.std(lr)
+    losses = -np.diff(data)
 
-# ** 2.Computation of sd**
-def rho(n, c, mu, sigma):
-    cond_mean = n * (1 - np.exp(mu+ sigma**2 / 2))
-    cond_var = n**2 * (np.exp(sigma**2) - 1) * np.exp(2*mu + sigma**2)
-    return cond_mean + c * np.sqrt(cond_var)
-c = 1.64
+    c = st.slider("Risk-appetite parameter c:", min_value=0.5, max_value=3.0, value=1.64, step=0.01)
+    st.caption(f"c = {c:.2f} corresponds roughly to the {100*float(st.session_state.get('_sd_alpha', 0)):.0f}% normal quantile" if False else "")
 
+    def rho(S_n, c, mu, sigma):
+        cond_mean = S_n * (1 - np.exp(mu + sigma**2 / 2))
+        cond_var = S_n**2 * (np.exp(sigma**2) - 1) * np.exp(2 * mu + sigma**2)
+        return cond_mean + c * np.sqrt(cond_var)
 
-st.write(f"Pre-defined risk-appetite is: {c}")
+    sd_risk = np.array([rho(data[i], c, mu, sigma) for i in range(len(data))])
 
-# lr
-returns_dax = get_log_returns(data)
+    loss_df = pd.DataFrame({"Index": range(len(losses)), "Losses": losses})
+    sd_df = pd.DataFrame({"Index": range(len(data)), "Risk Measure": sd_risk})
 
-# Losses
-losses = -np.diff(data)
-
-# Get parameters
-mu = np.mean(returns_dax)
-sigma = np.std(returns_dax)
-
-# compute standard deviation
-sd = np.empty(len(data))
-
-for i in range(len(data)):
-    sd[i] = rho(data[i], c, mu, sigma)
-
-
-# Transform to df
-loss_df = pd.DataFrame({"Index": range(len(losses)), "Losses": losses})
-sd_df = pd.DataFrame({"Index": range(len(data)), "sd": sd})
-
-
-
-# ** 2.Visualization **
-@st.cache_data
-def plot_sd(loss_df, sd_df):
-    """Generates a Plotly figure comparing losses and sd."""
     fig = go.Figure()
-
-    # Losses
     fig.add_trace(go.Scatter(
-        x=loss_df.index, 
-        y=loss_df["Losses"], 
-        mode="lines", 
-        name="Losses", 
-        line=dict(color="lightblue")
+        x=loss_df["Index"], y=loss_df["Losses"],
+        mode="lines", name="Daily Losses", line=dict(color="steelblue", width=1)
     ))
-
-    # sd
     fig.add_trace(go.Scatter(
-        x=sd_df.index, 
-        y=sd_df["sd"], 
-        mode="lines", 
-        name="Standard Deviation", 
-        line=dict(color="crimson")
+        x=sd_df["Index"], y=sd_df["Risk Measure"],
+        mode="lines", name=f"ϱ (c={c:.2f})", line=dict(color="crimson", width=2)
     ))
-
     fig.update_layout(
-        # title="Standard Deviation",
-        xaxis_title="Time (Days)",
-        yaxis_title="Loss",
-        legend=dict(x=0, y=1),
-        xaxis=dict(showgrid=True),
-        yaxis=dict(showgrid=True)
+        xaxis_title="Trading Day", yaxis_title="Loss (index points)",
+        legend=dict(x=0, y=1), xaxis=dict(showgrid=True), yaxis=dict(showgrid=True)
     )
+    st.plotly_chart(fig, use_container_width=True)
 
-    return fig
-
-fig = plot_sd(loss_df, sd_df)
-st.plotly_chart(fig)
-
-
-st.write("---")
+    st.markdown("""
+    **Observation:** The risk measure grows with the DAX index level (since absolute losses scale
+    with price), but it cannot adapt to **volatility regimes**. During crises, actual losses spike
+    far above the estimated risk — motivating VaR and ES.
+    """)
