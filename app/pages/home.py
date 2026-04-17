@@ -27,6 +27,15 @@ with st.expander("Chapter 2 — Risk Measures & Backtesting"):
     - **Backtesting:** Visual exceedance analysis, binomial test, multi-level comparison
     """)
 
+with st.expander("Chapter 4 — Copulas & Dependence Structures"):
+    st.markdown("""
+    - **Rolling Correlations:** Pearson vs Spearman rank correlation (BMW vs VW)
+    - **Gaussian Copula:** Cholesky sampling, positive/negative correlation
+    - **Normal Mixture Copula:** Mixing two Gaussian copulas for complex dependence
+    - **Clayton / Reverse Clayton Copula:** Upper tail dependence, insurance VaR application
+    - **Kendall's τ:** Robust copula parameter estimation, fitted R matrix for all 5 DAX stocks
+    """)
+
 with st.expander("Chapter 3 — Extreme Value Theory"):
     st.markdown("""
     - **Heavy Tails:** QQ plots vs Normal / Student-t
