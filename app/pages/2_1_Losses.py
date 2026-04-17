@@ -10,7 +10,7 @@ import streamlit as st
 from util.data_utils import load_dax_companies
 
 st.title("📉 Losses")
-st.markdown("""
+st.markdown(r"""
 Financial institutions — banks, insurance companies, investment funds — are permanently exposed to
 the risk of financial loss. A single extreme loss event can threaten not just the institution itself
 but, through contagion, the broader financial system. This **systemic dimension** is why risk

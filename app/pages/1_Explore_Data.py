@@ -12,7 +12,7 @@ from util.data_utils import load_dax_index, get_log_returns
 
 # --- HEADER ---
 st.title("📊 Explore Data")
-st.markdown("""
+st.markdown(r"""
 Before building any risk model, we must understand the **statistical properties of financial returns**.
 This section analyses daily log returns of the DAX index and confronts them with the most common
 modelling assumption: that returns are independently and identically normally distributed (i.i.d. normal).

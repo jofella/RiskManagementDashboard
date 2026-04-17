@@ -13,7 +13,7 @@ from util.data_utils import load_dax_index, get_log_returns
 WINDOW = 252
 
 st.title("🔍 Backtesting VaR")
-st.markdown("""
+st.markdown(r"""
 A risk model that cannot be empirically validated is of limited regulatory and practical value.
 **Backtesting** is the process of systematically comparing a model's predictions against
 realised outcomes — asking: *does our VaR model actually contain losses at the stated frequency?*

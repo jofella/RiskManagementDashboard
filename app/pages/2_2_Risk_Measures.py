@@ -7,7 +7,7 @@ import streamlit as st
 from risk_measure import standard_deviation, VaR, ES
 
 st.title("📏 Measuring Risk")
-st.markdown("""
+st.markdown(r"""
 Having quantified risk through the loss operator, we now need to **summarise the entire loss
 distribution in a single number** that can serve as a capital requirement. This number is
 produced by a **risk measure** — a functional $\varrho$ mapping a random loss $L$ to a real value

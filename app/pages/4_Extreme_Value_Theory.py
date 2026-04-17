@@ -12,7 +12,7 @@ from scipy.optimize import minimize
 from util.data_utils import load_dax_index, get_log_returns
 
 st.title("📈 Extreme Value Theory (EVT)")
-st.markdown("""
+st.markdown(r"""
 Standard risk models based on the normal distribution systematically **underestimate the probability
 and severity of extreme losses** — precisely the events that cause institutional failures.
 Extreme Value Theory (EVT) addresses this by providing a mathematically rigorous framework for

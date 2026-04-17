@@ -15,7 +15,7 @@ STOCK_NAMES = ["BMW", "SAP", "Volkswagen", "Continental", "Siemens"]
 WINDOW = 252
 
 st.title("🔗 Copulas & Dependence Structures")
-st.markdown("""
+st.markdown(r"""
 In portfolio risk management, it is rarely sufficient to model each asset in isolation —
 the **joint behaviour** of assets under stress is what determines whether a portfolio survives
 an extreme event. The central challenge is that assets may show only moderate correlation under
