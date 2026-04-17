@@ -265,3 +265,164 @@ st.markdown("""
 - **Fail at high α (0.99)** → model underestimates extreme tail risk (common with normal assumption)
 - **Clustered exceedances** → violations are not i.i.d.; GARCH models or conditional VaR would help
 """)
+
+# ================================================================
+# SECTION 4: Confidence Intervals via Order Statistics
+# ================================================================
+st.write("---")
+st.header("4. Confidence Intervals via Order Statistics")
+st.markdown(r"""
+The historical simulation VaR is itself a **random variable** — it depends on the sample used.
+Quantifying uncertainty around the VaR estimate is therefore essential.
+
+For a sample of $n$ observations, $\text{VaR}_\alpha$ is estimated by the $k$-th order statistic
+$X_{(k)}$ where $k = \lfloor n\alpha \rfloor$. The count of observations below $X_{(k)}$ follows
+$\text{Bin}(n, \alpha)$, so a $(1-\gamma)$ confidence interval for the *index* $k$ is:
+
+$$[k_l,\, k_u] = \left[\text{Bin}_{n,\alpha}^{-1}\!\left(\tfrac{\gamma}{2}\right),\;
+\text{Bin}_{n,\alpha}^{-1}\!\left(1-\tfrac{\gamma}{2}\right)\right]$$
+
+and the CI for $\text{VaR}_\alpha$ is simply $[X_{(k_l)},\, X_{(k_u)}]$.
+""")
+
+ci_level = st.select_slider("Confidence interval level:", options=[0.90, 0.95, 0.99], value=0.95)
+
+
+@st.cache_data
+def compute_var_ci_order_stats(losses, alpha, ci, window=WINDOW):
+    n = len(losses)
+    var_c = np.full(n, np.nan)
+    var_lo = np.full(n, np.nan)
+    var_hi = np.full(n, np.nan)
+    gamma = 1 - ci
+    k_l = max(0, int(stats.binom.ppf(gamma / 2, window, alpha)) - 1)
+    k_u = min(window - 1, int(stats.binom.ppf(1 - gamma / 2, window, alpha)))
+    k = int(np.floor(window * alpha))
+    for t in range(window, n):
+        s = np.sort(losses[t - window:t])
+        var_c[t] = s[min(k, window - 1)]
+        var_lo[t] = s[k_l]
+        var_hi[t] = s[k_u]
+    return var_c, var_lo, var_hi
+
+
+var_os, var_os_lo, var_os_hi = compute_var_ci_order_stats(losses, alpha, ci_level)
+
+fig_os = go.Figure()
+t_ax = np.arange(len(losses))
+valid_os = ~np.isnan(var_os)
+fig_os.add_trace(go.Scatter(
+    x=t_ax[valid_os], y=var_os_hi[valid_os],
+    mode="lines", name=f"{int(ci_level*100)}% CI upper",
+    line=dict(color="orange", width=0), showlegend=True
+))
+fig_os.add_trace(go.Scatter(
+    x=t_ax[valid_os], y=var_os_lo[valid_os],
+    mode="lines", name=f"{int(ci_level*100)}% CI lower",
+    fill="tonexty", fillcolor="rgba(255,165,0,0.25)",
+    line=dict(color="orange", width=0)
+))
+fig_os.add_trace(go.Scatter(
+    x=t_ax, y=var_os,
+    mode="lines", name=f"VaR_{alpha} (hist. sim.)", line=dict(color="steelblue", width=2)
+))
+fig_os.add_trace(go.Scatter(
+    x=t_ax, y=losses,
+    mode="lines", name="Daily Loss", line=dict(color="grey", width=1), opacity=0.4
+))
+fig_os.update_layout(
+    xaxis_title="Trading Day", yaxis_title="Loss (index points)",
+    legend=dict(x=0, y=1), xaxis=dict(showgrid=True), yaxis=dict(showgrid=True)
+)
+st.plotly_chart(fig_os, use_container_width=True)
+
+k_center = int(np.floor(WINDOW * alpha))
+k_lo = max(0, int(stats.binom.ppf((1 - ci_level) / 2, WINDOW, alpha)) - 1)
+k_hi = min(WINDOW - 1, int(stats.binom.ppf(1 - (1 - ci_level) / 2, WINDOW, alpha)))
+st.markdown(f"""
+**For α={alpha}, n={WINDOW}:** $k={k_center}$, CI index range $[{k_lo}, {k_hi}]$
+(a span of only {k_hi - k_lo} order statistics out of {WINDOW}).
+The CI width is **narrow** because the window is large relative to the tail probability —
+the estimate is fairly precise even with only one year of data.
+""")
+
+# ================================================================
+# SECTION 5: Bootstrap Confidence Intervals
+# ================================================================
+st.write("---")
+st.header("5. Bootstrap Confidence Intervals")
+st.markdown(r"""
+The **bootstrap** provides an alternative, non-parametric approach to CI estimation.
+Rather than relying on distributional results for order statistics, it approximates the
+sampling distribution of $\widehat{\text{VaR}}_\alpha$ directly:
+
+1. Draw $B$ bootstrap samples $(L^*_1, \ldots, L^*_n)$ by **sampling with replacement** from the window
+2. Compute $\widehat{\text{VaR}}_\alpha^{*(b)}$ for each resample $b = 1, \ldots, B$
+3. The bootstrap CI is $\left[\widehat{\text{VaR}}^*_{(\gamma/2)},\;
+   \widehat{\text{VaR}}^*_{(1-\gamma/2)}\right]$ — the empirical percentiles of the $B$ estimates
+
+The bootstrap is more flexible than the order statistics approach: it naturally extends
+to **any** risk measure (e.g. ES) without requiring closed-form distributional results.
+""")
+
+B_boot = st.select_slider("Bootstrap replications B:", options=[100, 250, 500], value=250)
+st.caption("Computed on a sparse grid (every 10th day) for performance.")
+
+
+@st.cache_data
+def compute_var_ci_bootstrap(losses, alpha, ci, B, window=WINDOW, step=10):
+    n = len(losses)
+    t_points = np.arange(window, n, step)
+    rng = np.random.default_rng(42)
+    var_c = np.full(len(t_points), np.nan)
+    var_lo = np.full(len(t_points), np.nan)
+    var_hi = np.full(len(t_points), np.nan)
+    for i, t in enumerate(t_points):
+        w = losses[t - window:t]
+        var_c[i] = np.percentile(w, alpha * 100)
+        boot = np.percentile(
+            rng.choice(w, size=(B, window), replace=True),
+            alpha * 100, axis=1
+        )
+        var_lo[i] = np.percentile(boot, (1 - ci) / 2 * 100)
+        var_hi[i] = np.percentile(boot, (1 + ci) / 2 * 100)
+    return t_points, var_c, var_lo, var_hi
+
+
+t_boot, var_boot, var_boot_lo, var_boot_hi = compute_var_ci_bootstrap(
+    losses, alpha, ci_level, B_boot
+)
+
+fig_boot = go.Figure()
+fig_boot.add_trace(go.Scatter(
+    x=t_boot, y=var_boot_hi,
+    mode="lines", name=f"{int(ci_level*100)}% CI upper",
+    line=dict(color="crimson", width=0)
+))
+fig_boot.add_trace(go.Scatter(
+    x=t_boot, y=var_boot_lo,
+    mode="lines", name=f"{int(ci_level*100)}% CI lower",
+    fill="tonexty", fillcolor="rgba(220,50,50,0.2)",
+    line=dict(color="crimson", width=0)
+))
+fig_boot.add_trace(go.Scatter(
+    x=t_boot, y=var_boot,
+    mode="lines", name=f"VaR_{alpha} (hist. sim.)", line=dict(color="steelblue", width=2)
+))
+fig_boot.add_trace(go.Scatter(
+    x=t_ax, y=losses,
+    mode="lines", name="Daily Loss", line=dict(color="grey", width=1), opacity=0.4
+))
+fig_boot.update_layout(
+    xaxis_title="Trading Day", yaxis_title="Loss (index points)",
+    legend=dict(x=0, y=1), xaxis=dict(showgrid=True), yaxis=dict(showgrid=True)
+)
+st.plotly_chart(fig_boot, use_container_width=True)
+
+st.markdown(f"""
+**Comparison:** Both methods produce similar CI widths for this dataset.
+The bootstrap CI is **distribution-free** and applies equally to ES (which has no
+closed-form order statistics result). The CI widens during high-volatility regimes
+(2008, 2020) because the tail observations are more dispersed in those windows —
+a direct measure of **estimation uncertainty** under market stress.
+""")

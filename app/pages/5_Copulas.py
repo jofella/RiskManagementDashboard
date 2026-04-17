@@ -460,3 +460,180 @@ the industrials, reflecting common macro-factor exposure rather than sector-spec
 The small deviation of diagonal entries from 1 is an artifact of duplicate zero log-returns
 (weekends/holidays) that create a discrete mass point — a known caveat noted in the lecture.
 """)
+st.write("---")
+
+
+# ============================================================
+# SECTION 6: t-Copula
+# ============================================================
+st.header("6. t-Copula")
+st.markdown(r"""
+The **bivariate t-copula** $C_{\nu,R}^t$ with $\nu$ degrees of freedom and correlation matrix $R$
+is the copula implied by a bivariate Student-t distribution. It is sampled as:
+
+1. Draw $Z \sim \mathcal{N}(0, R)$ (correlated normals via Cholesky of $R$)
+2. Draw $s \sim \chi^2_\nu / \nu$ (independent chi-squared)
+3. Set $X = Z / \sqrt{s}$ — this follows a bivariate t-distribution with d.o.f. $\nu$
+4. Transform: $U_i = t_\nu(X_i)$ where $t_\nu$ is the Student-t CDF
+
+Unlike the Gaussian copula, the t-copula has **symmetric tail dependence**:
+
+$$\lambda_u = \lambda_l = 2\, t_{\nu+1}\!\left(-\sqrt{(\nu+1)(1-\rho)/(1+\rho)}\right) > 0$$
+
+for any $\rho < 1$ and finite $\nu$. As $\nu \to \infty$ the t-copula converges to the Gaussian
+copula. Small $\nu$ ($< 5$) corresponds to heavy joint tails — much more realistic for equities
+during stress periods.
+
+### MLE for $\nu$
+Given pseudo-observations $(u_1, u_2)$ on the unit square, the log-likelihood is:
+
+$$\ell(\nu, R) = \sum_t \log c_{\nu,R}^t\!\left(u_{1,t}, u_{2,t}\right)$$
+
+where $c_{\nu,R}^t$ is the t-copula density obtained by differentiating $C_{\nu,R}^t$.
+We fix $R$ to the Gaussian copula estimate from Section 5 and profile over $\nu \in (2, 50]$.
+""")
+
+pair_labels_t = [f"{STOCK_NAMES[i]} vs {STOCK_NAMES[j]}" for i in range(5) for j in range(i+1, 5)]
+pair_options_t = [(i, j) for i in range(5) for j in range(i+1, 5)]
+pair_choice_t = st.selectbox("Select pair for t-copula fit:", pair_labels_t,
+                              index=0, key="tcopula_pair")
+i_t, j_t = pair_options_t[pair_labels_t.index(pair_choice_t)]
+
+
+@st.cache_data
+def fit_t_copula_nu(u1, u2, rho, nu_grid=None):
+    """Profile log-likelihood over nu with R fixed to the 2x2 submatrix."""
+    if nu_grid is None:
+        nu_grid = np.concatenate([np.arange(2.5, 10, 0.5), np.arange(10, 51, 1.0)])
+
+    R2 = np.array([[1.0, rho], [rho, 1.0]])
+    n = len(u1)
+    best_ll, best_nu = -np.inf, None
+    ll_vals = []
+
+    for nu in nu_grid:
+        # Transform pseudo-obs back to t quantiles
+        x1 = stats.t.ppf(np.clip(u1, 1e-6, 1 - 1e-6), df=nu)
+        x2 = stats.t.ppf(np.clip(u2, 1e-6, 1 - 1e-6), df=nu)
+        X = np.column_stack([x1, x2])
+
+        # Bivariate t log-density
+        sign, logdet = np.linalg.slogdet(R2)
+        R2_inv = np.linalg.inv(R2)
+        quad = np.einsum("ni,ij,nj->n", X, R2_inv, X)
+        ll_joint = (
+            np.log(stats.t.pdf(x1, df=nu))
+            + np.log(stats.t.pdf(x2, df=nu))
+            + stats.multivariate_normal.logpdf(X, mean=[0, 0], cov=R2)  # placeholder
+        )
+
+        # Correct bivariate t density
+        log_bvt = (
+            np.log(stats.gamma((nu + 2) / 2))
+            - np.log(stats.gamma(nu / 2))
+            - np.log(nu * np.pi)
+            - 0.5 * logdet
+            - ((nu + 2) / 2) * np.log(1 + quad / nu)
+        )
+        # Marginal t log-densities (subtract to get copula density)
+        log_m1 = stats.t.logpdf(x1, df=nu)
+        log_m2 = stats.t.logpdf(x2, df=nu)
+        log_copula = log_bvt - log_m1 - log_m2
+        ll = float(np.sum(log_copula))
+        ll_vals.append(ll)
+        if ll > best_ll:
+            best_ll, best_nu = ll, nu
+
+    return best_nu, nu_grid, np.array(ll_vals)
+
+
+@st.cache_data
+def sample_t_copula(rho, nu, n_samples, seed=42):
+    rng = np.random.default_rng(seed)
+    A = np.array([[1.0, 0.0], [rho, np.sqrt(1 - rho**2)]])
+    Z = rng.standard_normal((n_samples, 2)) @ A.T
+    chi2 = rng.chisquare(nu, size=n_samples)
+    X = Z / np.sqrt(chi2 / nu)[:, None]
+    U = stats.t.cdf(X, df=nu)
+    return U
+
+
+@st.cache_data
+def sample_gaussian_copula_2d(rho, n_samples, seed=99):
+    rng = np.random.default_rng(seed)
+    A = np.array([[1.0, 0.0], [rho, np.sqrt(1 - rho**2)]])
+    Z = rng.standard_normal((n_samples, 2)) @ A.T
+    return stats.norm.cdf(Z)
+
+
+u1_t = transformed[:, i_t]
+u2_t = transformed[:, j_t]
+rho_pair = float(R_gauss[i_t, j_t])
+
+with st.spinner("Fitting t-copula (profile MLE over ν)..."):
+    best_nu, nu_grid, ll_profile = fit_t_copula_nu(u1_t, u2_t, rho_pair)
+
+tail_dep = 2 * stats.t.cdf(
+    -np.sqrt((best_nu + 1) * (1 - rho_pair) / (1 + rho_pair)), df=best_nu + 1
+)
+
+col1, col2, col3 = st.columns(3)
+col1.metric("Estimated ν (d.o.f.)", f"{best_nu:.1f}")
+col2.metric("Fixed correlation ρ", f"{rho_pair:.4f}")
+col3.metric("Tail dependence λ", f"{tail_dep:.4f}")
+
+st.markdown(f"""
+**Interpretation:** $\\hat{{\\nu}} = {best_nu:.1f}$ degrees of freedom. The smaller $\\nu$ is,
+the heavier the joint tails. With $\\hat{{\\nu}} = {best_nu:.1f}$, the tail dependence coefficient
+$\\lambda = {tail_dep:.4f}$ means that in the extreme tail, roughly {tail_dep*100:.1f}% of
+simultaneous extreme events co-occur — something the Gaussian copula ($\\lambda = 0$) completely misses.
+""")
+
+# Profile log-likelihood plot
+fig_ll = go.Figure()
+fig_ll.add_trace(go.Scatter(
+    x=nu_grid, y=ll_profile,
+    mode="lines", name="Profile log-likelihood", line=dict(color="steelblue", width=2)
+))
+fig_ll.add_vline(x=best_nu, line_dash="dash", line_color="crimson", line_width=2,
+                 annotation_text=f"ν̂ = {best_nu:.1f}", annotation_position="top right")
+fig_ll.update_layout(
+    xaxis_title="Degrees of freedom ν", yaxis_title="Log-likelihood",
+    xaxis=dict(showgrid=True), yaxis=dict(showgrid=True)
+)
+st.plotly_chart(fig_ll, use_container_width=True)
+
+# Scatter comparison: Gaussian vs t-copula
+n_cop = 3000
+U_t = sample_t_copula(rho_pair, best_nu, n_cop)
+U_ga = sample_gaussian_copula_2d(rho_pair, n_cop)
+
+fig_cmp = go.Figure()
+fig_cmp.add_trace(go.Scatter(
+    x=U_ga[:, 0], y=U_ga[:, 1], mode="markers",
+    marker=dict(color="steelblue", size=2.5, opacity=0.4),
+    name="Gaussian copula"
+))
+fig_cmp.add_trace(go.Scatter(
+    x=U_t[:, 0], y=U_t[:, 1], mode="markers",
+    marker=dict(color="crimson", size=2.5, opacity=0.4),
+    name=f"t-copula (ν={best_nu:.0f})"
+))
+fig_cmp.add_trace(go.Scatter(
+    x=u1_t, y=u2_t, mode="markers",
+    marker=dict(color="black", size=2, opacity=0.25),
+    name="Empirical pseudo-obs"
+))
+fig_cmp.update_layout(
+    xaxis_title=f"U₁ — {STOCK_NAMES[i_t]}", yaxis_title=f"U₂ — {STOCK_NAMES[j_t]}",
+    xaxis=dict(range=[0, 1], showgrid=True), yaxis=dict(range=[0, 1], showgrid=True),
+    legend=dict(x=0.01, y=0.99)
+)
+st.plotly_chart(fig_cmp, use_container_width=True)
+
+st.markdown(r"""
+**Key visual:** The t-copula (red) accumulates more mass in the **corners** — the (0,0)
+and (1,1) regions — compared to the Gaussian copula (blue). These corners represent joint
+extreme events. The empirical pseudo-observations (black) show the actual clustering of
+extremes. A well-fitted t-copula captures this corner mass; the Gaussian copula cannot.
+""")

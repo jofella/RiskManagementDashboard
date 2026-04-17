@@ -19,6 +19,7 @@ pages = {
         st.Page("pages/3_Backtesting.py",         title="Backtesting",            icon="🔍"),
         st.Page("pages/4_Extreme_Value_Theory.py",title="Extreme Value Theory",   icon="📈"),
         st.Page("pages/5_Copulas.py",             title="Copulas",                icon="🔗"),
+        st.Page("pages/6_GARCH.py",               title="GARCH Model",            icon="📉"),
     ],
 }
 

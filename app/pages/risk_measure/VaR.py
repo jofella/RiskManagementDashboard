@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from scipy import stats
 
-from util.data_utils import load_dax_index, get_log_returns
+from util.data_utils import load_dax_index, load_dax_companies, get_log_returns
 
 WINDOW = 252  # 1 trading year
 
@@ -172,4 +172,94 @@ def render():
     On {(1-alpha)*100:.1f}% of trading days, the loss **exceeds** this threshold.
     The red shaded area represents the unmodelled **tail risk** — what happens beyond VaR
     is not captured. This is the key weakness that **Expected Shortfall (ES)** addresses.
+    """)
+
+    # ------------------------------------------------------------------ #
+    # Variance-Covariance Method (VCM) — multi-asset portfolio
+    # ------------------------------------------------------------------ #
+    st.write("---")
+    st.subheader("3. Variance-Covariance Method (VCM)")
+    st.markdown(r"""
+    The **Variance-Covariance Method** applies VaR to a multi-asset portfolio by exploiting
+    the **linearised loss**. For a portfolio with euro-denominated weights
+    $\mathbf{w}_n = (\alpha_i S_{n,i})_i$, the linearised loss is:
+
+    $$L^\Delta_{n+1} = -\mathbf{w}_n^\top X_{n+1}$$
+
+    Assuming $X_{n+1} \mid \mathcal{F}_n \sim \mathcal{N}(\hat{\mu}_n,\, \hat{\Sigma}_n)$
+    (multivariate normal with rolling estimates), the portfolio loss is also normal:
+
+    $$L^\Delta_{n+1} \mid \mathcal{F}_n \;\sim\; \mathcal{N}\!\left(-\mathbf{w}_n^\top\hat{\mu}_n,\;
+    \mathbf{w}_n^\top \hat{\Sigma}_n \mathbf{w}_n\right)$$
+
+    so the VaR reduces to a closed-form expression:
+
+    $$\text{VaR}_\alpha^{\text{VCM}} = -\mathbf{w}_n^\top \hat{\mu}_n +
+    \sqrt{\mathbf{w}_n^\top \hat{\Sigma}_n \mathbf{w}_n}\cdot \Phi^{-1}(\alpha)$$
+
+    The key advantage over single-asset VaR: the covariance matrix $\hat{\Sigma}_n$ captures
+    **cross-asset correlations**, so diversification effects are automatically reflected.
+    """)
+
+    STOCK_NAMES_VCM = ["BMW", "SAP", "Volkswagen", "Continental", "Siemens"]
+    data_comp = load_dax_companies()
+    lr_comp = np.diff(np.log(data_comp), axis=0)
+    T_comp = len(lr_comp)
+
+    @st.cache_data
+    def compute_vcm_var(lr_comp, data_comp, weights, confidence, window=WINDOW):
+        n = len(lr_comp)
+        var_out = np.full(n, np.nan)
+        for t in range(window, n):
+            w = weights * data_comp[t]
+            window_lr = lr_comp[t - window:t]
+            mu_w = np.mean(window_lr, axis=0)
+            Sigma_w = np.cov(window_lr.T)
+            port_mean = w @ mu_w
+            port_var = w @ Sigma_w @ w
+            var_out[t] = -port_mean + np.sqrt(max(port_var, 0)) * stats.norm.ppf(confidence)
+        return var_out
+
+    default_weights = np.array([4, 8, 15, 16, 23])
+    var_vcm = compute_vcm_var(lr_comp, data_comp, default_weights, alpha)
+
+    losses_port = np.array([
+        -default_weights @ data_comp[t] * (np.exp(lr_comp[t]) - 1)
+        for t in range(T_comp)
+    ])
+
+    vcm_valid = ~np.isnan(var_vcm)
+    n_vcm_exceed = int(np.sum((losses_port > var_vcm) & vcm_valid))
+    n_vcm_valid = int(np.sum(vcm_valid))
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric("VCM exceedances", n_vcm_exceed)
+    m2.metric("Exceedance rate", f"{n_vcm_exceed / n_vcm_valid * 100:.2f}%")
+    m3.metric("Expected rate", f"{(1 - alpha) * 100:.1f}%")
+
+    fig_vcm = go.Figure()
+    fig_vcm.add_trace(go.Scatter(
+        x=np.arange(T_comp), y=losses_port,
+        mode="lines", name="Portfolio Loss (€)", line=dict(color="steelblue", width=1), opacity=0.6
+    ))
+    fig_vcm.add_trace(go.Scatter(
+        x=np.arange(T_comp), y=var_vcm,
+        mode="lines", name=f"VCM VaR_{alpha}", line=dict(color="orange", width=2)
+    ))
+    exc_vcm = np.where((losses_port > var_vcm) & vcm_valid)[0]
+    fig_vcm.add_trace(go.Scatter(
+        x=exc_vcm, y=losses_port[exc_vcm],
+        mode="markers", name="Exceedance", marker=dict(color="red", size=5)
+    ))
+    fig_vcm.update_layout(
+        xaxis_title="Trading Day", yaxis_title="Loss (€)",
+        legend=dict(x=0, y=1), xaxis=dict(showgrid=True), yaxis=dict(showgrid=True)
+    )
+    st.plotly_chart(fig_vcm, use_container_width=True)
+
+    st.markdown(f"""
+    **Portfolio:** {dict(zip(STOCK_NAMES_VCM, default_weights.tolist()))} shares.
+    The VCM uses the full **5×5 covariance matrix** of log returns, updated daily on a
+    rolling 252-day window. Correlations between stocks reduce portfolio variance below
+    the sum of individual variances — the mathematical expression of diversification.
     """)
