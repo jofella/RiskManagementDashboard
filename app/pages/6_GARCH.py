@@ -265,25 +265,15 @@ with col2:
 @st.cache_data
 def garch_mc_var(omega, alpha_g, beta_g, last_sigma2, last_return, horizon, B, alpha_level, seed=42):
     rng = np.random.default_rng(seed)
-    eps = rng.standard_normal((B, horizon))
-    cum_loss = np.zeros(B)
-    sigma2_path = float(last_sigma2)
-    x_prev = float(last_return)
-    for t in range(horizon):
-        sigma2_path = omega + alpha_g * x_prev ** 2 + beta_g * sigma2_path
-        x_t = np.sqrt(sigma2_path) * eps[:, t]
-        cum_loss -= x_t
-        x_prev = float(np.mean(x_t))  # use mean as "representative" previous return for path
-    # Each path has its own trajectory
     sigma2_sim = np.full(B, float(last_sigma2))
     x_sim = np.full(B, float(last_return))
-    cum_loss_correct = np.zeros(B)
-    eps2 = rng.standard_normal((B, horizon))
+    cum_loss = np.zeros(B)
+    eps = rng.standard_normal((B, horizon))
     for t in range(horizon):
         sigma2_sim = omega + alpha_g * x_sim ** 2 + beta_g * sigma2_sim
-        x_sim = np.sqrt(sigma2_sim) * eps2[:, t]
-        cum_loss_correct -= x_sim
-    return cum_loss_correct, np.percentile(cum_loss_correct, alpha_level * 100)
+        x_sim = np.sqrt(sigma2_sim) * eps[:, t]
+        cum_loss -= x_sim
+    return cum_loss, np.percentile(cum_loss, alpha_level * 100)
 
 
 mc_losses, mc_var = garch_mc_var(

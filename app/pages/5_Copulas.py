@@ -8,6 +8,7 @@ from plotly.subplots import make_subplots
 import streamlit as st
 from scipy import stats
 from scipy.stats import nbinom, pareto
+from scipy.special import gammaln
 
 from util.data_utils import load_dax_companies, get_log_returns
 
@@ -521,16 +522,9 @@ def fit_t_copula_nu(u1, u2, rho, nu_grid=None):
         sign, logdet = np.linalg.slogdet(R2)
         R2_inv = np.linalg.inv(R2)
         quad = np.einsum("ni,ij,nj->n", X, R2_inv, X)
-        ll_joint = (
-            np.log(stats.t.pdf(x1, df=nu))
-            + np.log(stats.t.pdf(x2, df=nu))
-            + stats.multivariate_normal.logpdf(X, mean=[0, 0], cov=R2)  # placeholder
-        )
-
-        # Correct bivariate t density
         log_bvt = (
-            np.log(stats.gamma((nu + 2) / 2))
-            - np.log(stats.gamma(nu / 2))
+            gammaln((nu + 2) / 2)
+            - gammaln(nu / 2)
             - np.log(nu * np.pi)
             - 0.5 * logdet
             - ((nu + 2) / 2) * np.log(1 + quad / nu)
