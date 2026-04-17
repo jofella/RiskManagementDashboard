@@ -16,16 +16,48 @@ WINDOW = 252
 
 st.title("🔗 Copulas & Dependence Structures")
 st.markdown("""
-A **copula** separates the dependence structure of a multivariate distribution from its marginals.
-By **Sklar's theorem**, any joint distribution $F$ with marginals $F_1, \ldots, F_d$ can be written as:
+In portfolio risk management, it is rarely sufficient to model each asset in isolation —
+the **joint behaviour** of assets under stress is what determines whether a portfolio survives
+an extreme event. The central challenge is that assets may show only moderate correlation under
+normal conditions but move together violently during crises, a phenomenon known as
+**tail dependence**. Copulas provide the mathematical language to describe this precisely.
 
-$$F(x_1, \ldots, x_d) = C(F_1(x_1), \ldots, F_d(x_d))$$
+### Sklar's Theorem: The Fundamental Decomposition
+Every joint distribution $F$ with continuous marginals $F_1, \ldots, F_d$ can be
+*uniquely* decomposed as:
 
-where $C: [0,1]^d \\to [0,1]$ is the **copula** — a distribution on the unit hypercube with
-uniform marginals. This decomposition is unique if all marginals are continuous.
+$$F(x_1, \ldots, x_d) = C\!\left(F_1(x_1), \ldots, F_d(x_d)\right)$$
 
-**Why copulas?** They let us model the dependence structure independently of the shape
-of the individual marginal distributions — a crucial separation for risk management.
+where $C: [0,1]^d \to [0,1]$ is a **copula** — a multivariate distribution on the unit
+hypercube with uniform $\mathcal{U}(0,1)$ marginals (Sklar, 1959). Conversely, any copula $C$
+combined with arbitrary marginals $F_i$ defines a valid joint distribution.
+
+This decomposition is powerful because it **separates two orthogonal modelling choices**:
+1. **Marginal distributions** $F_i$ — capturing the individual behaviour of each asset
+   (e.g. fat-tailed Student-t or fitted EVT distributions).
+2. **Copula $C$** — capturing the dependence structure independently of the marginals.
+
+### Tail Dependence
+The **upper tail dependence coefficient** measures the probability that one variable is extreme
+*given* the other is extreme:
+
+$$\lambda_u = \lim_{\alpha \to 1} P\!\left(F_1(X_1) > \alpha \mid F_2(X_2) > \alpha\right)$$
+
+- $\lambda_u > 0$: **upper tail dependence** — extremes co-occur; critical for portfolio stress
+- $\lambda_u = 0$: **asymptotic independence** — extremes become independent in the limit
+
+The **Gaussian copula has $\lambda_u = 0$** regardless of correlation — a critical limitation
+exposed during the 2008 financial crisis, where structured products priced under Gaussian copula
+assumptions experienced simultaneous defaults far beyond model predictions.
+
+### Copula Families Covered Here
+| Copula | Tail dependence | Key parameter | Typical use |
+|---|---|---|---|
+| **Gaussian** | None ($\lambda_u = \lambda_l = 0$) | Correlation $R$ | Baseline linear dependence |
+| **Normal Mixture** | Flexible (mixture) | $R_1, R_2, p$ | Regime-switching dependence |
+| **Clayton** | Lower tail ($\lambda_l > 0$) | $\vartheta > 0$ | Simultaneous small losses |
+| **Reverse Clayton** | Upper tail ($\lambda_u > 0$) | $\vartheta > 0$ | Simultaneous large losses |
+| **t-Copula** | Both tails ($\lambda_u = \lambda_l > 0$) | $\nu, R$ | Heavy joint tail risk |
 """)
 st.write("---")
 

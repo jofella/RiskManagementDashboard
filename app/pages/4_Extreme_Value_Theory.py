@@ -13,13 +13,41 @@ from util.data_utils import load_dax_index, get_log_returns
 
 st.title("📈 Extreme Value Theory (EVT)")
 st.markdown("""
-Standard models assume **normally distributed** returns. But financial markets exhibit **fat tails** —
-extreme losses occur far more often than the normal distribution predicts.
+Standard risk models based on the normal distribution systematically **underestimate the probability
+and severity of extreme losses** — precisely the events that cause institutional failures.
+Extreme Value Theory (EVT) addresses this by providing a mathematically rigorous framework for
+modelling the *tail* of a distribution, without imposing assumptions on its centre.
 
-**Extreme Value Theory** provides a rigorous mathematical framework for modelling the tail of a
-distribution, independent of what the centre looks like. The key tool is the
-**Peak-over-Threshold (POT)** method, which fits a **Generalized Pareto Distribution (GPD)**
-to exceedances above a high threshold.
+### The Theoretical Foundation
+The key result underpinning EVT is the **Pickands–Balkema–de Haan theorem** (a conditional analogue
+of the Fisher–Tippett–Gnedenko theorem for maxima): for a wide class of distributions, the
+conditional excess distribution above a sufficiently high threshold $u$ converges to a
+**Generalized Pareto Distribution (GPD)**:
+
+$$P(L - u \leq y \mid L > u) \xrightarrow{u \to \infty} G_{\xi, \sigma}(y) = 1 - \left(1 + \frac{\xi y}{\sigma}\right)^{-1/\xi}$$
+
+The two parameters carry the key information:
+- **Shape $\xi$ (tail index):** Controls tail heaviness. $\xi > 0$ implies a **Pareto-type heavy tail**
+  with polynomial decay; $\xi = 0$ gives an exponential tail (normal, lognormal);
+  $\xi < 0$ gives a bounded tail. For financial returns, $\xi \in (0.2, 0.4)$ is typical.
+- **Scale $\sigma > 0$:** Controls the spread of exceedances above the threshold.
+
+### Two Main EVT Approaches
+1. **Block Maxima (BM):** Fit a Generalised Extreme Value (GEV) distribution to the maxima of
+   non-overlapping blocks (e.g. annual maxima). Intuitive but wasteful — discards all
+   non-maxima observations.
+2. **Peak-over-Threshold (POT):** Fit a GPD to all observations exceeding a high threshold $u$.
+   More data-efficient and the preferred approach in practice.
+
+### Why EVT Matters for Risk Management
+Once the GPD is fitted, VaR and ES can be **extrapolated beyond the historical sample** to
+confidence levels (e.g. 99.9%) where no historical data exists. This is critical for:
+- **Regulatory stress testing** (Basel IV FRTB uses 97.5% ES)
+- **Solvency II** (insurance requires the 99.5% VaR over a one-year horizon)
+- **Economic capital** models for operational and credit risk
+
+The EVT estimates are systematically **larger** than normal-distribution estimates at high
+confidence levels — precisely because they account for the fat tail the normal ignores.
 """)
 st.write("---")
 

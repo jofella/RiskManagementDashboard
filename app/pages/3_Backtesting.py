@@ -14,13 +14,44 @@ WINDOW = 252
 
 st.title("🔍 Backtesting VaR")
 st.markdown("""
-A VaR model is only useful if it **actually works**. Backtesting checks whether the number of
-observed **exceedances** (days where the actual loss exceeds the predicted VaR) is statistically
-consistent with the chosen confidence level.
+A risk model that cannot be empirically validated is of limited regulatory and practical value.
+**Backtesting** is the process of systematically comparing a model's predictions against
+realised outcomes — asking: *does our VaR model actually contain losses at the stated frequency?*
 
-Two approaches are used:
-1. **Visual backtesting** — plot VaR over time and inspect exceedances
-2. **Statistical backtesting** — binomial test on the exceedance count
+### The Fundamental Idea
+If $\text{VaR}_\alpha$ is correctly specified, then by definition:
+
+$$P(L_{n+1} > \text{VaR}_\alpha^{(n)}) = 1 - \alpha$$
+
+This means that on each day, the realised loss exceeds the predicted VaR with probability
+$1 - \alpha$, independently of all other days. In a sample of $n$ observations, the number of
+**exceedances** (also called *VaR violations*) should therefore follow:
+
+$$N \sim \text{Bin}(n,\, 1-\alpha)$$
+
+Backtesting tests whether the observed exceedance count is statistically consistent with this
+theoretical distribution — providing a formal model validation procedure.
+
+### Regulatory Context: The Basel Traffic Light
+Under **Basel II/III**, banks must backtest their internal VaR models daily against
+a 250-day rolling window at the 99% confidence level. The number of violations
+determines the **multiplicative factor** applied to capital requirements:
+
+| Zone | Violations (250 days) | Capital multiplier |
+|---|---|---|
+| 🟢 Green | 0 – 4 | 3.0 (baseline) |
+| 🟡 Yellow | 5 – 9 | 3.4 – 3.85 |
+| 🔴 Red | ≥ 10 | 4.0 (maximum) |
+
+Too few violations can also be problematic — it may indicate an **over-conservative** model
+that ties up unnecessary capital.
+
+### Two Approaches Used Here
+1. **Visual backtesting** — plot rolling VaR against realised losses; identify exceedances and
+   check for temporal clustering (clustered violations suggest the model fails to capture
+   volatility dynamics).
+2. **Statistical backtesting (Kupiec test)** — formally test $H_0: p = 1 - \alpha$ using the
+   binomial distribution; compute p-value and render a pass/fail verdict.
 """)
 st.write("---")
 

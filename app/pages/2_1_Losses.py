@@ -11,15 +11,36 @@ from util.data_utils import load_dax_companies
 
 st.title("📉 Losses")
 st.markdown("""
-Why do we need risk management? Financial institutions like banks are subject to losses. Extreme
-large losses may lead to bankruptcy and may also threaten third parties. In order to prevent this,
-those institutions accumulate **buffer capital**. Three main questions arise:
+Financial institutions — banks, insurance companies, investment funds — are permanently exposed to
+the risk of financial loss. A single extreme loss event can threaten not just the institution itself
+but, through contagion, the broader financial system. This **systemic dimension** is why risk
+management is subject to strict regulatory oversight (Basel II/III/IV for banks, Solvency II for
+insurers) and why the quantification of losses is the foundation of all modern risk frameworks.
 
-- How to **quantify** risk?
-- How to **measure** risk?
-- What **capital reserve** is needed in view of this risk?
+### Three Central Questions
+Any rigorous risk management framework must answer:
 
-The following sections introduce the basics for capturing **market risk**.
+1. **How to quantify risk?** — What is the appropriate mathematical object for measuring a firm's
+   exposure? This section introduces the **loss operator**, which maps portfolio structure and
+   market movements into a monetary loss figure.
+2. **How to measure risk?** — Given a loss distribution, how do we summarise it in a single
+   number suitable for capital calculations? This leads to **risk measures** (VaR, ES) in the
+   next section.
+3. **How much capital reserve is needed?** — Regulators require institutions to hold capital
+   sufficient to absorb losses up to a specified confidence level. The risk measure directly
+   determines this buffer.
+
+### The General Framework
+We model a portfolio as a function of **risk factors** $(Z_n)$ — typically log asset prices.
+The **loss** over period $[t_n, t_{n+1}]$ is the negative change in portfolio value:
+
+$$L_{n+1} = -(V_{n+1} - V_n) = \ell_{[n]}(X_{n+1})$$
+
+where $X_{n+1} = Z_{n+1} - Z_n$ are the **risk factor changes** and $\ell_{[n]}$ is the
+**loss operator** — a function known at time $t_n$. This separation between the
+*portfolio structure* (encoded in $\ell_{[n]}$) and the *market movements* ($X_{n+1}$)
+is the key modelling insight: it allows us to study the loss distribution independently
+of specific portfolio choices.
 """)
 st.write("---")
 

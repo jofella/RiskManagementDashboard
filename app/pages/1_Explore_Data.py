@@ -13,8 +13,34 @@ from util.data_utils import load_dax_index, get_log_returns
 # --- HEADER ---
 st.title("📊 Explore Data")
 st.markdown("""
-This section analyses **log returns** of the DAX index, compares them with a **normal distribution**,
-and simulates a price process using Monte Carlo methods.
+Before building any risk model, we must understand the **statistical properties of financial returns**.
+This section analyses daily log returns of the DAX index and confronts them with the most common
+modelling assumption: that returns are independently and identically normally distributed (i.i.d. normal).
+
+### The Log-Return Model
+For a price process $(S_n)_{n \geq 0}$, the **log return** over period $n$ is defined as:
+
+$$X_n = \log S_n - \log S_{n-1} = \log\left(\frac{S_n}{S_{n-1}}\right)$$
+
+Log returns are preferred over simple returns $S_n/S_{n-1} - 1$ for several reasons:
+they are **additively aggregable** over time ($X_1 + \cdots + X_n = \log(S_n/S_0)$), approximately
+symmetric around zero, and naturally connected to the continuous-time model of Geometric Brownian Motion.
+
+### The Normal Assumption — and Why It Fails
+Under the classical **Black-Scholes** framework, log returns are assumed i.i.d. normal:
+$X_n \sim \mathcal{N}(\mu, \sigma^2)$. This implies that the price process follows a
+**Geometric Brownian Motion** and leads to analytically tractable pricing formulas.
+
+However, empirical financial data consistently violates this assumption through a set of
+well-documented **stylised facts**:
+- **Leptokurtosis (fat tails):** Extreme returns occur far more frequently than the normal
+  distribution predicts. Excess kurtosis $> 0$ is the statistical signature.
+- **Volatility clustering:** Large price moves tend to be followed by large moves, small by small
+  — a phenomenon captured by GARCH-type models but absent under i.i.d. normality.
+- **Slight negative skewness:** Losses tend to be larger in magnitude than equivalent gains.
+
+These features are not academic curiosities — they directly determine how often risk models
+*underestimate* extreme losses, with profound consequences for capital requirements and solvency.
 """)
 st.write("---")
 
