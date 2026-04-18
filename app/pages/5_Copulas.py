@@ -725,15 +725,20 @@ col1.metric("Estimated ν (d.o.f.)", f"{best_nu:.1f}")
 col2.metric("Fixed correlation ρ", f"{rho_pair:.4f}")
 col3.metric("Tail dependence λ", f"{tail_dep:.4f}")
 
+_regime_text = (
+    r"consistent with the heavy-tail regime ($\nu < 10$) typical for equity pairs"
+    if best_nu < 10 else
+    "in the moderate range; joint tail dependence is present but not extreme"
+)
 st.markdown(fr"""
 **Interpreting $\hat{{\nu}} = {best_nu:.1f}$:** The profile likelihood peaks at
 $\hat{{\nu}} = {best_nu:.1f}$ degrees of freedom. Recall that as $\nu \to \infty$, the t-copula
 converges to the Gaussian copula (zero tail dependence); small $\nu$ gives heavier joint tails.
-The estimate $\hat{{\nu}} \approx {best_nu:.1f}$ is {"consistent with the heavy-tail regime ($\\nu < 10$) typical for equity pairs" if best_nu < 10 else "in the moderate range; joint tail dependence is present but not extreme"}.
+The estimate $\hat{{\nu}} \approx {best_nu:.1f}$ is {_regime_text}.
 
-**Tail dependence quantified:** With $\hat{{\nu}} = {best_nu:.1f}$ and $\hat{{\\rho}} = {rho_pair:.3f}$,
+**Tail dependence quantified:** With $\hat{{\nu}} = {best_nu:.1f}$ and $\hat{{\rho}} = {rho_pair:.3f}$,
 the tail dependence coefficient is:
-$$\lambda = 2\,t_{{\hat{{\nu}}+1}}\!\!\left(-\sqrt{{(\hat{{\nu}}+1)(1-\hat{{\\rho}})/(1+\hat{{\\rho}})}}\right) = {tail_dep:.4f}$$
+$$\lambda = 2\,t_{{\hat{{\nu}}+1}}\!\!\left(-\sqrt{{(\hat{{\nu}}+1)(1-\hat{{\rho}})/(1+\hat{{\rho}})}}\right) = {tail_dep:.4f}$$
 This means: conditional on one stock's return being in the top (or bottom) 1%, the probability
 that the other stock's return is *also* in the extreme tail is approximately **{tail_dep*100:.1f}%**.
 The Gaussian copula ($\lambda = 0$) predicts this probability converges to *zero* in the limit —

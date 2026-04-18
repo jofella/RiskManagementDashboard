@@ -334,7 +334,7 @@ def render():
     var_vcm = compute_vcm_var(lr_comp, data_comp, default_weights, alpha)
 
     losses_port = np.array([
-        -default_weights @ data_comp[t] * (np.exp(lr_comp[t]) - 1)
+        -(default_weights * data_comp[t]) @ (np.exp(lr_comp[t]) - 1)
         for t in range(T_comp)
     ])
 

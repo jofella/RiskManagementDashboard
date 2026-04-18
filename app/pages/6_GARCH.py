@@ -288,26 +288,42 @@ with col2:
 skew_r = stats.skew(std_resid)
 kurt_r = stats.kurtosis(std_resid)
 _, p_jb = stats.jarque_bera(std_resid)
+
+_skew_assess = "Acceptable" if abs(skew_r) < 0.3 else "Non-trivial asymmetry remaining"
+_kurt_assess = "Substantial — Student-t innovations recommended" if kurt_r > 1 else "Mild — Gaussian innovations adequate"
+_jb_assess = "Not rejected" if p_jb > 0.05 else "Rejected — residuals not normal"
+
+if p_jb > 0.05:
+    _model_assessment = (
+        "**Model assessment — Gaussian innovations adequate:** The GARCH(1,1) with normal "
+        "innovations captures the bulk of the temporal dependence in variance. Residual excess "
+        "kurtosis is low, and the JB test does not reject normality at conventional significance levels."
+    )
+else:
+    _implied_nu = f"{4 + 6 / max(kurt_r, 0.1):.0f}"
+    _model_assessment = (
+        f"**Model assessment — Student-t innovations recommended:** Even after GARCH filtering, the\n"
+        f"standardised residuals exhibit excess kurtosis of {kurt_r:.2f}. Under i.i.d. normality the\n"
+        f"expected excess kurtosis is 0; the observed value suggests **remaining fat-tail structure**\n"
+        f"that the conditional variance model does not fully explain.\n\n"
+        f"A **GARCH(1,1) with Student-t innovations** (estimating $\\\\nu$ jointly with "
+        f"$\\\\omega, \\\\alpha, \\\\beta$) would model this residual kurtosis explicitly: "
+        f"$\\\\hat{{\\\\varepsilon}}_t \\\\sim t_\\\\nu(0,1)$ with "
+        f"$\\\\hat{{\\\\nu}} \\\\approx 4 + 6/{kurt_r:.2f} \\\\approx {_implied_nu}$ degrees of freedom "
+        f"implied by the residual kurtosis alone. The Jarque-Bera rejection confirms this is statistically "
+        f"significant, not a small-sample artefact."
+    )
+
 st.markdown(f"""
 **Residual diagnostics:**
 
 | Statistic | Value | Benchmark (i.i.d. Normal) | Assessment |
 |---|---|---|---|
-| Skewness | {skew_r:.4f} | 0 | {"Acceptable" if abs(skew_r) < 0.3 else "Non-trivial asymmetry remaining"} |
-| Excess kurtosis | {kurt_r:.4f} | 0 | {"Substantial — Student-t innovations recommended" if kurt_r > 1 else "Mild — Gaussian innovations adequate"} |
-| Jarque-Bera p-value | {p_jb:.6f} | > 0.05 under H₀ | {"Not rejected" if p_jb > 0.05 else "Rejected — residuals not normal"} |
+| Skewness | {skew_r:.4f} | 0 | {_skew_assess} |
+| Excess kurtosis | {kurt_r:.4f} | 0 | {_kurt_assess} |
+| Jarque-Bera p-value | {p_jb:.6f} | > 0.05 under H₀ | {_jb_assess} |
 
-{"**Model assessment — Gaussian innovations adequate:** The GARCH(1,1) with normal innovations captures the bulk of the temporal dependence in variance. Residual excess kurtosis is low, and the JB test does not reject normality at conventional significance levels." if p_jb > 0.05 else f"""
-**Model assessment — Student-t innovations recommended:** Even after GARCH filtering, the
-standardised residuals exhibit excess kurtosis of {kurt_r:.2f}. Under i.i.d. normality the
-expected excess kurtosis is 0; the observed value suggests **remaining fat-tail structure**
-that the conditional variance model does not fully explain.
-
-A **GARCH(1,1) with Student-t innovations** (estimating $\\nu$ jointly with $\\omega, \\alpha, \\beta$)
-would model this residual kurtosis explicitly: $\\hat{{\\varepsilon}}_t \\sim t_\\nu(0,1)$ with
-$\\hat{{\\nu}} \\approx 4 + 6/{kurt_r:.2f} \\approx {4+6/max(kurt_r,0.1):.0f}$ degrees of freedom
-implied by the residual kurtosis alone. The Jarque-Bera rejection confirms this is statistically
-significant, not a small-sample artefact."""}
+{_model_assessment}
 
 **Interpretation of the QQ plot:** Deviations from the 45° line in the tails of the standardised
 residuals confirm that even after removing conditional heteroscedasticity, the innovations
