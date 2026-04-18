@@ -67,6 +67,45 @@ def render():
     where $\\phi$ is the standard normal PDF and $\\Phi^{-1}$ is the quantile function.
     """)
 
+    with st.expander("📖 Intuition: ES in plain language"):
+        st.markdown(r"""
+        If VaR is the **flood line**, ES is the **average flood depth above that line**.
+
+        Formally, ES at level $\alpha$ is the average loss *given* that the loss exceeds
+        $\text{VaR}_\alpha$. It asks: "On the bad days, how bad are they on average?"
+
+        **Concrete example:** Suppose daily losses (in €M) are: 0.1, 0.2, 0.3, …, 1.0.
+        - $\text{VaR}_{90\%} = €0.9\text{M}$ — the 90th percentile.
+        - $\text{ES}_{90\%} = €0.95\text{M}$ — average of the worst 10%: $(0.9 + 1.0)/2$.
+
+        Now replace that €1.0M loss with a €100M catastrophe:
+        - $\text{VaR}_{90\%}$ is **unchanged** — it only looks at the 90th percentile.
+        - $\text{ES}_{90\%}$ jumps to **€50.45M** — it correctly reflects the severity.
+
+        **This is the core message:** VaR is blind to what happens beyond its threshold.
+        ES is not. For a risk manager, the question is never just "will we breach VaR?" but
+        "how much will we lose if we do?" — and only ES answers this.
+        """)
+
+    with st.expander("📖 Coherence: the four axioms"):
+        st.markdown(r"""
+        A risk measure $\varrho$ is **coherent** (Artzner, Delbaen, Eber, Heath 1999) if it satisfies:
+
+        1. **Translation invariance:** $\varrho(L + c) = \varrho(L) + c$ — adding a sure loss of $c$
+           increases risk by exactly $c$.
+        2. **Positive homogeneity:** $\varrho(\lambda L) = \lambda \varrho(L)$ for $\lambda > 0$ —
+           doubling a position doubles its risk.
+        3. **Monotonicity:** $L_1 \leq L_2 \Rightarrow \varrho(L_1) \leq \varrho(L_2)$ — larger
+           losses imply higher risk.
+        4. **Subadditivity:** $\varrho(L_1 + L_2) \leq \varrho(L_1) + \varrho(L_2)$ — diversification
+           cannot increase risk.
+
+        **VaR fails subadditivity** (as shown in the VaR section). **ES satisfies all four**,
+        making it the preferred regulatory risk measure under Basel IV. The practical consequence:
+        under ES, a bank that merges two trading desks can never be required to hold more capital
+        than the sum of the two desks' individual capital requirements.
+        """)
+
     with st.expander("Why ES is superior to VaR"):
         st.markdown("""
         | Property | VaR | ES |

@@ -158,17 +158,60 @@ st.plotly_chart(fig_bar, use_container_width=True)
 
 # === SECTION 2: Statistical Backtesting ===
 st.write("---")
-st.header("2. Statistical Backtesting (Binomial Test)")
-st.markdown(f"""
-Under the null hypothesis $H_0$ that the VaR model is correctly specified,
-each day is independently a VaR exceedance with probability $p_0 = 1-\\alpha = {expected_rate}$.
+st.header("2. Statistical Backtesting — Kupiec Test")
+st.markdown(fr"""
+The **Kupiec (1995) proportion-of-failures (POF) test** formalises the visual inspection into
+a rigorous hypothesis test. Under $H_0$ that the VaR model is correctly specified,
+each day is independently a VaR exceedance with probability $p_0 = 1-\alpha = {expected_rate}$.
 
 The number of exceedances $N$ follows a **Binomial distribution**:
 
-$$N \\sim \\text{{Bin}}(n, p_0), \\quad n = {n_valid}, \\quad p_0 = {expected_rate}$$
+$$N \sim \mathrm{{Bin}}(n, p_0), \quad n = {n_valid}, \quad p_0 = {expected_rate}$$
 
-We test $H_0: p = p_0$ against $H_1: p \\neq p_0$ (two-sided).
+We test $H_0: p = p_0$ against $H_1: p \neq p_0$ (two-sided). Rejection means the
+model produces systematically too many or too few exceedances — evidence of misspecification.
 """)
+
+with st.expander("📖 Intuition: What is a p-value?"):
+    st.markdown(r"""
+    The **p-value** is the probability of observing a test statistic *at least as extreme* as
+    the one we got, **assuming the null hypothesis is true**.
+
+    It does **not** mean:
+    - ~~"The probability that the model is correct"~~ (that's a Bayesian posterior)
+    - ~~"The probability that the result is due to chance"~~ (common but wrong)
+
+    It **does** mean: *"If the model were correct and we repeated this backtest many times,
+    what fraction of repetitions would give a result at least this unusual?"*
+
+    **Decision rule at 5% significance:**
+    - $p > 0.05$: Data are consistent with the model → do not reject $H_0$
+    - $p \leq 0.05$: Observed exceedances are too far from expected → reject $H_0$
+
+    **Caveat:** The Kupiec test only checks the *number* of violations, not their *timing*.
+    A model can pass the Kupiec test yet still be wrong if violations are clustered in time
+    (e.g. all during one crisis). The **Christoffersen (1998) independence test** addresses this.
+    """)
+
+with st.expander("📖 Intuition: Basel traffic light in plain terms"):
+    st.markdown(r"""
+    The Basel traffic light system was designed so regulators could audit banks' internal VaR
+    models without running complex statistical tests. It simply counts violations over 250 days:
+
+    | Violations | Zone | Interpretation |
+    |---|---|---|
+    | 0–4 | 🟢 Green | Model seems fine — expected range under 99% VaR |
+    | 5–9 | 🟡 Yellow | Model may have problems — increased capital surcharge |
+    | ≥ 10 | 🔴 Red | Model is clearly wrong — maximum surcharge, immediate review |
+
+    The green zone (0–4 violations) corresponds roughly to the 95% acceptance region of
+    the binomial test at $n=250$, $p=1\%$. The expected count is 2.5 violations.
+
+    **An important subtlety:** Zero violations sounds great but can actually be *suspicious* —
+    it might mean the model is far too conservative, tying up excess capital. In practice,
+    regulators and risk managers watch both the upper *and* lower tails of the exceedance
+    distribution.
+    """)
 
 # Binomial test
 p_value = stats.binomtest(n_exceed, n_valid, expected_rate, alternative="two-sided").pvalue

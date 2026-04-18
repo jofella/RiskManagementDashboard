@@ -42,6 +42,51 @@ where $X_{n+1} = Z_{n+1} - Z_n$ are the **risk factor changes** and $\ell_{[n]}$
 is the key modelling insight: it allows us to study the loss distribution independently
 of specific portfolio choices.
 """)
+
+with st.expander("📖 Intuition: What is a risk factor?"):
+    st.markdown(r"""
+    A **risk factor** is any market variable whose change can cause a financial loss. Common examples:
+
+    | Asset class | Typical risk factors |
+    |---|---|
+    | Equity portfolio | Log stock prices $\ln S_{n,i}$ |
+    | Fixed income | Interest rates at each maturity (yield curve) |
+    | FX exposure | Log exchange rates |
+    | Options book | Underlying price, implied volatility, time to expiry |
+
+    The key idea: instead of modelling the full complexity of portfolio value, we project the
+    problem onto a small set of driving variables. The **loss operator** $\ell_{[n]}$ is then
+    a deterministic function that maps changes in risk factors to a euro-denominated loss.
+
+    **Why this separation?** Because it lets us decouple two distinct modelling problems:
+    1. *Statistical modelling:* What is the joint distribution of $X_{n+1}$? (Chapters 1–4)
+    2. *Portfolio mapping:* How does a given change $X_{n+1}$ translate to a loss? (This section)
+    """)
+
+with st.expander("📖 Intuition: Nonlinear vs. linear loss — when does it matter?"):
+    st.markdown(r"""
+    The **nonlinear (exact) loss** for a stock portfolio is:
+
+    $$L_{n+1} = -\sum_i \alpha_i S_{n,i} \left(e^{X_{n+1,i}} - 1\right)$$
+
+    The **linearised loss** approximates $e^x - 1 \approx x$ (valid for small $x$):
+
+    $$\tilde{L}_{n+1} = -\sum_i \alpha_i S_{n,i} \cdot X_{n+1,i}$$
+
+    **When is the approximation good?**
+    - Daily log returns are typically $< 2\%$ in absolute value → error $< 0.02\%$ → negligible.
+    - Over a one-day horizon, the difference is invisible on a chart.
+
+    **When does it break down?**
+    - **Extreme events:** A 10% move creates a linearisation error of ~0.5% — small but not zero.
+    - **Options:** The payoff is highly nonlinear (convex), so first-order approximation (delta)
+      misses the **gamma** effect. This is why options books use full revaluation, not VCM.
+    - **Long horizons:** Over weeks or months, the approximation accumulates errors.
+
+    For a plain equity portfolio over one day, the linearised loss is almost always sufficient —
+    which is why the Variance-Covariance Method (VCM) is so widely used in practice.
+    """)
+
 st.write("---")
 
 

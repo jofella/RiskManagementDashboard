@@ -43,6 +43,50 @@ def render():
     $\\text{VaR}_\\alpha$. Equivalently, there is a $(1-\\alpha)$ chance of exceeding it.
     """)
 
+    with st.expander("📖 Intuition: VaR in plain language"):
+        st.markdown(r"""
+        **$\text{VaR}_{99\%} = €1\text{M}$** means: *"On 99 out of 100 trading days, we will
+        not lose more than €1 million. On the remaining 1 day, we might lose more — and VaR
+        tells us nothing about how much more."*
+
+        Think of VaR as a **flood insurance threshold**, not a worst-case loss. If your house
+        is in a "1-in-100-year flood zone", VaR tells you where the flood line is — but
+        nothing about how deep the flood will be when it comes.
+
+        **How is it used in practice?**
+        - **Trading desks:** Daily P&L is monitored against VaR limits. Breach → position review.
+        - **Basel II/III:** Banks must hold capital equal to a multiple of their 10-day 99% VaR.
+        - **Internal risk reporting:** Senior management receives a daily one-number risk summary.
+
+        **The estimation methods compared:**
+        | Method | Data used | Assumption | Strength |
+        |---|---|---|---|
+        | Normal parametric | Mean + std of window | Returns are normal | Fast, analytical |
+        | Historical simulation | Empirical quantile of window | No distribution assumption | Captures fat tails, skewness |
+        | GARCH-based | Conditional variance model | Volatility clustering | Time-varying risk |
+        """)
+
+    with st.expander("📖 Deep dive: Why is VaR not subadditive?"):
+        st.markdown(r"""
+        A **coherent risk measure** (Artzner et al., 1999) must satisfy four axioms, one of which is
+        **subadditivity**: $\varrho(L_A + L_B) \leq \varrho(L_A) + \varrho(L_B)$.
+
+        Subadditivity captures the idea that *diversification cannot increase risk* — merging
+        two portfolios should not require more capital than holding them separately.
+
+        **VaR violates this.** A simple counterexample:
+        - Bond A defaults with probability 1% → loses €100; otherwise zero.
+        - Bond B: same, independent of A.
+        - $\text{VaR}_{99\%}(A) = 0$ and $\text{VaR}_{99\%}(B) = 0$.
+        - But $P(\text{at least one default}) \approx 2\%$, so $\text{VaR}_{99\%}(A+B) > 0$.
+
+        So $\text{VaR}_{99\%}(A+B) > \text{VaR}_{99\%}(A) + \text{VaR}_{99\%}(B) = 0$.
+        **Diversification increased the measured risk** — the opposite of economic intuition.
+
+        This is why Basel IV (FRTB) replaced VaR with **Expected Shortfall** for internal
+        model capital calculations. ES is always subadditive.
+        """)
+
     with st.expander("Pros & Cons of VaR"):
         col1, col2 = st.columns(2)
         with col1:

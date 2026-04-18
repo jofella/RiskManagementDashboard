@@ -59,7 +59,55 @@ assumptions experienced simultaneous defaults far beyond model predictions.
 | **Clayton** | Lower tail ($\lambda_l > 0$) | $\vartheta > 0$ | Simultaneous small losses |
 | **Reverse Clayton** | Upper tail ($\lambda_u > 0$) | $\vartheta > 0$ | Simultaneous large losses |
 | **t-Copula** | Both tails ($\lambda_u = \lambda_l > 0$) | $\nu, R$ | Heavy joint tail risk |
+
 """)
+
+with st.expander("📖 Intuition: What is a copula in plain language?"):
+    st.markdown(r"""
+    Suppose you want to model two stock returns jointly. The naive approach: assume they're
+    bivariate normal with some correlation $\rho$. The problem: this forces a specific
+    dependence *structure* — including zero tail dependence — onto the data.
+
+    A **copula** separates this into two independent choices:
+    1. **Margins:** What does each return look like individually? (Normal? Student-t? GPD-fitted?)
+    2. **Copula:** How do the two returns *depend* on each other, after removing the effect of
+       the individual margins?
+
+    **Sklar's theorem** guarantees this separation is always possible and unique (for continuous margins).
+
+    **Concrete analogy:** Think of two runners in a race. The margins describe how fast each
+    runner is individually. The copula describes whether they tend to *both* have good days or
+    bad days at the same time — the dependence structure, stripped of individual speeds.
+
+    **Why this matters:** You can combine a fat-tailed marginal (e.g. fitted GPD) with a
+    t-copula (tail dependence) — capturing both individual fat tails and joint extreme co-movement.
+    This is impossible with a bivariate normal assumption.
+    """)
+
+with st.expander("📖 Why did the Gaussian copula fail in 2008?"):
+    st.markdown(r"""
+    The Gaussian copula was used extensively to price **Collateralised Debt Obligations (CDOs)** —
+    structured products whose value depends on the *joint* default behaviour of many mortgages.
+
+    **The model:** David Li (2000) proposed using a Gaussian copula to model the joint default
+    times. The correlation parameter $\rho$ was calibrated from CDS spreads and was typically
+    low (~0.3), reflecting the historically modest co-movement of regional US housing markets.
+
+    **The failure:** The Gaussian copula has **zero tail dependence** ($\lambda_u = 0$).
+    This means: in the model, as you condition on increasingly bad scenarios, assets become
+    *independent* in the extreme tail. In reality, when the US housing market collapsed,
+    *all* regions crashed simultaneously — precisely the tail co-movement the Gaussian copula
+    says is asymptotically impossible.
+
+    The result: CDO senior tranches rated AAA by models assuming Gaussian copula dependence
+    were, in practice, correlated enough to be nearly worthless when tail events occurred.
+    The model generated massive underestimates of joint default probabilities in stress scenarios.
+
+    **The lesson:** A t-copula with even $\nu = 10$ has non-zero tail dependence and would have
+    produced materially different (more conservative) risk estimates for the same correlation.
+    Model choice in the tail matters — enormously.
+    """)
+
 st.write("---")
 
 

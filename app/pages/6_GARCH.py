@@ -38,6 +38,67 @@ Under constant volatility, VaR is a fixed threshold. Under GARCH, VaR is **time-
 it rises after turbulent periods and falls during calm ones — much more aligned with actual
 market behaviour. The GARCH-based VaR also improves backtesting pass rates significantly.
 """)
+
+with st.expander("📖 Intuition: GARCH in plain language"):
+    st.markdown(r"""
+    Imagine you're forecasting tomorrow's weather. A naive model says: "The average temperature
+    in Berlin in January is 3°C — so tomorrow it will be 3°C." A better model says: "Yesterday
+    was -8°C, so tomorrow is probably still cold — below the long-run average."
+
+    GARCH does exactly this for volatility. The recursion
+    $\sigma_t^2 = \omega + \alpha X_{t-1}^2 + \beta \sigma_{t-1}^2$ says:
+
+    - **$\omega$:** The long-run "baseline" variance that volatility always gravitates towards.
+    - **$\alpha X_{t-1}^2$:** Yesterday's shock. A large move yesterday (positive or negative)
+      increases today's variance — the **ARCH effect**.
+    - **$\beta \sigma_{t-1}^2$:** Yesterday's variance. If it was already high, today's will
+      also be elevated — **variance momentum**, the **GARCH effect**.
+
+    The sum $\alpha + \beta$ controls how quickly volatility mean-reverts. For DAX data,
+    $\alpha + \beta \approx 0.97$–$0.99$ — very close to 1, meaning shocks take weeks or months
+    to decay. This is called **integrated GARCH behaviour** and is a universal feature of
+    equity markets.
+    """)
+
+with st.expander("📖 What does 'conditional' mean in GARCH?"):
+    st.markdown(r"""
+    The word **conditional** refers to conditioning on the information available at time $t-1$
+    (the filtration $\mathcal{F}_{t-1}$).
+
+    **Unconditional variance** $\text{Var}(X_t) = \sigma^2_\infty = \omega/(1-\alpha-\beta)$:
+    the long-run average variance, the same number every day.
+
+    **Conditional variance** $\text{Var}(X_t \mid \mathcal{F}_{t-1}) = \sigma_t^2$:
+    the variance of tomorrow's return *given everything we know today* — it changes every day.
+
+    The conditional variance is what actually matters for risk management. If markets were calm
+    all week, the conditional 99% VaR for tomorrow is low. If there was a crash yesterday,
+    the conditional VaR for today is much higher — and you should manage your position accordingly.
+
+    **The analogy:** The unconditional probability of rain in London in July is 40%.
+    But if it rained heavily yesterday and the forecast shows a depression moving in,
+    the *conditional* probability for tomorrow might be 85%. The conditional estimate is
+    more useful — and GARCH is the machine that computes the conditional volatility forecast.
+    """)
+
+with st.expander("📖 The ARCH test — is GARCH actually needed?"):
+    st.markdown(r"""
+    Before fitting a GARCH model, it's good practice to test whether time-varying volatility
+    is actually present in the data. **Engle's ARCH test** does this by regressing squared
+    residuals on their own lags:
+
+    $$X_t^2 = a_0 + a_1 X_{t-1}^2 + \cdots + a_q X_{t-q}^2 + \varepsilon_t$$
+
+    Under the null $H_0: a_1 = \cdots = a_q = 0$ (no ARCH effects), the test statistic
+    $n \cdot R^2 \sim \chi^2_q$. A significant result means squared returns are autocorrelated
+    — direct evidence of volatility clustering — and GARCH modelling is warranted.
+
+    For essentially all major equity indices, the ARCH test rejects $H_0$ with extremely high
+    confidence. The DAX is no exception: volatility clustering is one of the most robustly
+    documented features of financial data, first described by Mandelbrot (1963) and formalised
+    by Engle's ARCH model (1982, Nobel Prize 2003).
+    """)
+
 st.write("---")
 
 

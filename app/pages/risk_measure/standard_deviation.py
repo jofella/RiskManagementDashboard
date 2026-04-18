@@ -26,6 +26,28 @@ def render():
     $$\\operatorname{Var}_n(L_{n+1}) = S_n^2 \\left(e^{\\sigma^2} - 1\\right) e^{2\\mu + \\sigma^2}$$
     """)
 
+    with st.expander("📖 Intuition: Standard deviation as a risk measure"):
+        st.markdown(r"""
+        The standard deviation risk measure $\varrho(L) = \mathbb{E}[L] + c \cdot \text{Std}(L)$
+        says: *the risk of a position equals its expected loss plus a multiple of its volatility.*
+
+        **Where does this come from?** Under normality, $\mathbb{E}[L] + c \cdot \text{Std}(L)$
+        is exactly the $\Phi(c)$-quantile of the loss distribution — so for $c = 1.645$
+        this is just the 95% VaR. The formula generalises this to non-normal distributions
+        by using the first two moments as a summary.
+
+        **The risk-appetite parameter $c$:**
+        - $c = 1$: roughly 84% confidence (one standard deviation above the mean)
+        - $c = 1.645$: 95% confidence under normality
+        - $c = 2.326$: 99% confidence under normality
+        - Higher $c$ → more conservative → more capital allocated
+
+        **The fundamental problem:** Two distributions can have the same mean and variance but
+        completely different tail behaviour. Standard deviation is blind to *how bad* the worst
+        outcomes are — it treats a loss of €1 billion with the same weight as a loss of €1,000,
+        as long as they're equidistant from the mean.
+        """)
+
     with st.expander("Pros & Cons of Standard Deviation"):
         col1, col2 = st.columns(2)
         with col1:

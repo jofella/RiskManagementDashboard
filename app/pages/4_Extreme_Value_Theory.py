@@ -49,6 +49,53 @@ confidence levels (e.g. 99.9%) where no historical data exists. This is critical
 The EVT estimates are systematically **larger** than normal-distribution estimates at high
 confidence levels — precisely because they account for the fat tail the normal ignores.
 """)
+
+with st.expander("📖 Intuition: Why do we need EVT at all?"):
+    st.markdown(r"""
+    Consider estimating the 99.9% VaR from 10 years of daily data (~2,500 observations).
+    You need to estimate the **2.5th worst loss** — but you have only 2–3 observations in that
+    extreme quantile region. Any direct estimate is dominated by noise.
+
+    **The normal distribution "solves" this** by extrapolating from the centre (mean and variance)
+    to the tail using the Gaussian formula. But as we've seen, this extrapolation is badly wrong —
+    it dramatically underestimates tail probabilities.
+
+    **EVT solves this correctly.** It says: *"I don't know what the full distribution looks like
+    in the centre, but I can prove mathematically that the tail — above a high threshold —
+    must converge to a GPD, regardless of what distribution generated the data."*
+
+    This is the power of EVT: it provides a **universally valid model for extreme quantiles**
+    without requiring you to specify the full distribution. The only question is:
+    which shape parameter $\xi$ does the tail have?
+
+    **Analogy:** The Central Limit Theorem tells you that sums of random variables converge to
+    a normal, regardless of the original distribution. EVT is the analogous theorem for *maxima*
+    and *exceedances* — not averages.
+    """)
+
+with st.expander("📖 Intuition: What is a GPD and what does ξ mean?"):
+    st.markdown(r"""
+    The **Generalised Pareto Distribution** has CDF:
+
+    $$G_{\xi,\sigma}(y) = 1 - \left(1 + \frac{\xi y}{\sigma}\right)^{-1/\xi}, \quad y > 0$$
+
+    The shape parameter $\xi$ controls tail behaviour:
+
+    | $\xi$ | Tail type | Example distributions | Financial relevance |
+    |---|---|---|---|
+    | $\xi > 0$ | **Heavy (Pareto-type)** polynomial decay | Pareto, Student-t, log-Cauchy | Equities, credit losses — typical $\xi \approx 0.3$ |
+    | $\xi = 0$ | **Light (exponential)** | Normal, lognormal, exponential | Thin-tailed assets |
+    | $\xi < 0$ | **Bounded** (finite upper limit) | Beta, uniform | Rare in finance |
+
+    **Intuition for $\xi > 0$:** The survival function $P(X > x) \sim x^{-1/\xi}$ decays as a
+    power law — polynomially, not exponentially. This means extreme quantiles grow *much faster*
+    than the normal prediction as $\alpha \to 1$. Doubling $\alpha$ from 99% to 99.5% does not
+    just double the VaR — for $\xi = 0.3$, it roughly increases it by a factor of $2^{\xi} \approx 1.23$.
+
+    **In practice for DAX returns:** Typical estimates are $\hat{\xi} \approx 0.2$–$0.4$,
+    confirming heavy tails and validating the use of EVT over normal-based extrapolation.
+    """)
+
 st.write("---")
 
 
@@ -63,13 +110,32 @@ losses_pos = losses.copy()  # keep sign; negative values = gains
 # SECTION 1: QQ Plots
 # ============================================================
 st.header("1. Heavy Tails: QQ Plots")
-st.markdown("""
+st.markdown(r"""
 A **Quantile-Quantile (QQ) plot** compares the empirical quantiles of the data to the theoretical
 quantiles of a reference distribution. If the data follows the reference distribution, the points
-lie on a straight line.
+lie on a straight line. **Deviations in the upper-right tail** indicate **heavier tails** than
+the reference — the empirical extreme quantiles are larger than the model predicts.
 
-**Deviations in the upper-right tail** indicate **heavier tails** than the reference.
+The QQ plot is a simple but powerful diagnostic: it reveals in one glance whether the normal
+assumption is tenable for the tail region where VaR and ES estimates actually matter.
 """)
+
+with st.expander("📖 How to read a QQ plot"):
+    st.markdown(r"""
+    The QQ plot places **theoretical quantiles** on the x-axis and **empirical quantiles** on
+    the y-axis. Both are sorted from smallest to largest.
+
+    - **Points on the 45° line:** The distribution fits perfectly in that region.
+    - **Points curving upward (above the line) in the right tail:** The empirical tail is
+      *heavier* than the reference — actual extreme losses are larger than predicted.
+    - **Points curving downward (below the line) in the left tail:** Negative returns are
+      also more extreme than predicted (this is what you see for losses in the lower-left corner).
+
+    **What to look for here:** With a normal reference, you'll see the characteristic S-shape
+    or hockey-stick deviation in both tails — evidence of leptokurtosis. As you switch to
+    Student-t with $\nu = 4$ or $\nu = 6$, the fit in the tails improves, confirming that
+    financial returns have approximately Student-t tails.
+    """)
 
 dist_choice = st.radio(
     "Reference distribution:", ["Normal", "Student-t (ν=4)", "Student-t (ν=6)"], horizontal=True
