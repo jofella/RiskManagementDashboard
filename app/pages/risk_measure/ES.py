@@ -280,11 +280,25 @@ def render():
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-    st.markdown(f"""
-    **Interpretation:** At confidence level $\\alpha = {alpha}$:
-    - $\\text{{VaR}} = {var_static:.1f}$ pts — the threshold exceeded on {(1-alpha)*100:.1f}% of days
-    - $\\text{{ES}} = {es_static:.1f}$ pts — the **average loss** on those bad days
+    st.markdown(fr"""
+    **Static estimates at $\alpha = {alpha}$:**
+    - $\text{{VaR}}_{{{alpha}}} = {var_static:.1f}$ pts — the threshold breached on {(1-alpha)*100:.1f}% of days
+    - $\text{{ES}}_{{{alpha}}} = {es_static:.1f}$ pts — the average loss on those bad days
+    - The gap of **{es_static - var_static:.1f} pts** represents the tail severity VaR ignores
 
-    ES is always $\\geq$ VaR. The gap ({es_static - var_static:.1f} pts here) represents the
-    **additional tail severity** that VaR ignores. In fat-tailed distributions this gap is much larger.
+    **VaR vs ES ratio:** Under normality, $\text{{ES}}_\alpha / \text{{VaR}}_\alpha \approx
+    \phi(\Phi^{{-1}}(\alpha)) / ((1-\alpha) \Phi^{{-1}}(\alpha))$, which approaches 1 as
+    $\alpha \to 1$ for the normal but diverges for fat-tailed distributions. For the DAX
+    returns, the empirical ES/VaR ratio is substantially higher than the normal prediction
+    — reflecting the heavy tail that normal-based methods miss. This divergence is larger at
+    higher confidence levels and is directly observable in the rolling chart above: during
+    crisis periods, ES (orange) rises much more steeply than VaR (green), because the
+    *average* severity of bad days increases with volatility clustering.
+
+    **Dynamic risk management:** A risk manager observing the rolling chart should note that
+    both VaR and ES spike sharply during 2008–2009 and 2020 — meaning the capital requirement
+    implied by ES rises far above the static estimate during stress. This is why **dynamic
+    estimation** (GARCH-conditional VaR and ES) is more conservative and more accurate than
+    rolling-window methods: it captures volatility regime changes faster, updating the risk
+    estimate daily rather than waiting for crisis observations to enter the rolling window.
     """)

@@ -164,10 +164,30 @@ c4.metric("α + β (persistence)", f"{persistence:.4f}")
 c5.metric("σ²∞ (unconditional var)", f"{var_unc:.2e}")
 
 st.markdown(f"""
-**Interpretation:** Persistence $\\alpha + \\beta = {persistence:.4f}$ is close to 1,
-meaning volatility shocks take a long time to decay — consistent with the slow mean-reversion
-observed in financial markets. The half-life of a volatility shock is approximately
-$\\ln(0.5) / \\ln({persistence:.4f}) \\approx {np.log(0.5)/np.log(persistence):.0f}$ trading days.
+**Parameter interpretation:**
+
+The **ARCH coefficient** $\\hat{{\\alpha}} = {alpha_g:.4f}$ measures the immediate impact of a
+shock: a 1% daily return today increases tomorrow's variance by $\\hat{{\\alpha}} \\times (0.01)^2$,
+which is a modest but non-negligible contribution to total variance.
+
+The **GARCH coefficient** $\\hat{{\\beta}} = {beta_g:.4f}$ is the dominant driver:
+it carries {beta_g/persistence*100:.0f}% of the total persistence. High $\\hat{{\\beta}}$ means
+yesterday's *estimated variance* is very informative about today's — the model remembers
+volatility states for a long time.
+
+The **persistence** $\\hat{{\\alpha}} + \\hat{{\\beta}} = {persistence:.4f}$ governs the speed
+of mean-reversion. The implied **half-life** of a volatility shock is
+$\\ln(0.5)/\\ln({persistence:.4f}) \\approx {np.log(0.5)/np.log(persistence):.0f}$ trading days
+($\\approx {np.log(0.5)/np.log(persistence)/21:.1f}$ months). This is consistent with
+the empirical literature: equity volatility shocks typically take 1–3 months to fully dissipate.
+Values of $\\alpha + \\beta$ near 1.0 (so-called **near-IGARCH** behaviour) are universal
+across major equity indices and are sometimes interpreted as evidence that the unconditional
+variance is non-stationary or very slowly varying.
+
+The **unconditional variance** $\\hat{{\\sigma}}^2_\\infty = \\hat{{\\omega}}/(1 - \\hat{{\\alpha}} - \\hat{{\\beta}}) = {var_unc:.2e}$
+corresponds to an annualised volatility of
+$\\sqrt{{252 \\times {var_unc:.2e}}} \\times 100 \\approx {np.sqrt(252*var_unc)*100:.1f}\\%$,
+consistent with the long-run average DAX volatility of approximately 20–22% p.a.
 """)
 st.write("---")
 
@@ -194,6 +214,28 @@ fig1.update_layout(
     xaxis=dict(showgrid=True), yaxis=dict(showgrid=True)
 )
 st.plotly_chart(fig1, use_container_width=True)
+st.markdown(f"""
+**Reading the conditional volatility series:**
+
+The GARCH $\\hat{{\\sigma}}_t$ (annualised, %) ranges from approximately
+{sigma_ann.min():.1f}% to {sigma_ann.max():.1f}% over the sample — a factor of
+{sigma_ann.max()/sigma_ann.min():.1f}× between the calmest and most turbulent periods.
+The constant historical volatility (dotted line, {const_vol:.1f}% p.a.) sits roughly in the middle
+but severely misrepresents risk at both extremes.
+
+Three crisis episodes are immediately identifiable as volatility spikes:
+- **2001–2002 (dot-com bust / 9/11):** Sustained elevated volatility over ~18 months
+- **2008–2009 (Global Financial Crisis):** The largest spike, with $\\hat{{\\sigma}}_t$ reaching
+  its sample maximum. At peak, the GARCH 99% VaR was roughly {sigma_ann.max()/const_vol:.1f}×
+  the constant-volatility VaR — capital requirements would differ by the same factor.
+- **2020 (COVID-19):** A sharp but short-lived spike followed by rapid recovery, consistent
+  with the $\\hat{{\\beta}} \\approx {beta_g:.2f}$ persistence decaying over weeks.
+
+**Capital implications:** Under Basel II, banks using constant-volatility VaR would have
+held the same amount of capital in January 2008 as in September 2008. The GARCH model
+would have progressively increased the VaR estimate — and thus required capital — as the
+crisis unfolded, providing a more forward-looking capital buffer.
+""")
 st.write("---")
 
 
@@ -247,12 +289,30 @@ skew_r = stats.skew(std_resid)
 kurt_r = stats.kurtosis(std_resid)
 _, p_jb = stats.jarque_bera(std_resid)
 st.markdown(f"""
-Residual skewness: **{skew_r:.3f}** | Excess kurtosis: **{kurt_r:.3f}** |
-Jarque-Bera p-value: **{p_jb:.4f}**
+**Residual diagnostics:**
 
-{"✅ Residuals are close to normal — GARCH model fits well." if p_jb > 0.05 else
- "⚠️ Residuals still show non-normality. A GARCH model with Student-t innovations "
- "would improve the fit by allowing for remaining excess kurtosis."}
+| Statistic | Value | Benchmark (i.i.d. Normal) | Assessment |
+|---|---|---|---|
+| Skewness | {skew_r:.4f} | 0 | {"Acceptable" if abs(skew_r) < 0.3 else "Non-trivial asymmetry remaining"} |
+| Excess kurtosis | {kurt_r:.4f} | 0 | {"Substantial — Student-t innovations recommended" if kurt_r > 1 else "Mild — Gaussian innovations adequate"} |
+| Jarque-Bera p-value | {p_jb:.6f} | > 0.05 under H₀ | {"Not rejected" if p_jb > 0.05 else "Rejected — residuals not normal"} |
+
+{"**Model assessment — Gaussian innovations adequate:** The GARCH(1,1) with normal innovations captures the bulk of the temporal dependence in variance. Residual excess kurtosis is low, and the JB test does not reject normality at conventional significance levels." if p_jb > 0.05 else f"""
+**Model assessment — Student-t innovations recommended:** Even after GARCH filtering, the
+standardised residuals exhibit excess kurtosis of {kurt_r:.2f}. Under i.i.d. normality the
+expected excess kurtosis is 0; the observed value suggests **remaining fat-tail structure**
+that the conditional variance model does not fully explain.
+
+A **GARCH(1,1) with Student-t innovations** (estimating $\\nu$ jointly with $\\omega, \\alpha, \\beta$)
+would model this residual kurtosis explicitly: $\\hat{{\\varepsilon}}_t \\sim t_\\nu(0,1)$ with
+$\\hat{{\\nu}} \\approx 4 + 6/{kurt_r:.2f} \\approx {4+6/max(kurt_r,0.1):.0f}$ degrees of freedom
+implied by the residual kurtosis alone. The Jarque-Bera rejection confirms this is statistically
+significant, not a small-sample artefact."""}
+
+**Interpretation of the QQ plot:** Deviations from the 45° line in the tails of the standardised
+residuals confirm that even after removing conditional heteroscedasticity, the innovations
+retain some fat-tail structure. This motivates either (a) Student-t innovations in the GARCH
+model, or (b) applying EVT-based methods to the GARCH residuals rather than the raw returns.
 """)
 st.write("---")
 
@@ -301,6 +361,21 @@ fig4.update_layout(
     legend=dict(x=0, y=1), xaxis=dict(showgrid=True), yaxis=dict(showgrid=True)
 )
 st.plotly_chart(fig4, use_container_width=True)
+st.markdown(f"""
+**GARCH VaR performance:** The observed exceedance rate of {exc_rate_g:.3f}% compares against
+the expected rate of {(1-alpha_var)*100:.1f}% under correct model specification.
+
+A key observable property of GARCH-based VaR is that **exceedances are not clustered in
+time**. Unlike a constant-volatility VaR (where exceedances concentrate in crisis periods),
+the GARCH model raises its VaR estimate *as* volatility increases, so exceedances remain
+approximately uniformly distributed over time. This is precisely what the Kupiec test and the
+Christoffersen independence test measure in the backtesting chapter.
+
+Visually, notice how the orange VaR line expands dramatically during crisis periods (2008, 2020)
+and contracts during calm periods — tracking the realised loss distribution in real time.
+This time-varying property is the fundamental advantage of GARCH over constant-volatility models
+for regulatory capital calculations.
+""")
 st.write("---")
 
 

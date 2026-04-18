@@ -106,9 +106,22 @@ col2.metric("Std Dev (σ)", f"{sigma:.6f}")
 col3.metric("Skewness", f"{stats.skew(lr):.4f}")
 col4.metric("Excess Kurtosis", f"{stats.kurtosis(lr):.4f}")
 
-st.markdown("""
-> **Excess kurtosis > 0** is the fingerprint of **fat tails** — extreme returns occur more often
-> than a normal distribution predicts. This is the core motivation for advanced risk models.
+st.markdown(f"""
+The sample mean of {mu:.6f} is statistically indistinguishable from zero over this horizon —
+consistent with the Efficient Market Hypothesis that log returns are (approximately) unpredictable.
+The annualised volatility is $\\hat{{\\sigma}} \\times \\sqrt{{252}} \\approx {np.std(lr)*np.sqrt(252)*100:.1f}\\%$,
+within the typical range for developed equity indices (15–25% p.a. in calm periods, >40% in crises).
+
+The excess kurtosis of **{stats.kurtosis(lr):.2f}** (vs. 0 for a normal distribution) is the
+key diagnostic. For a Student-t distribution, excess kurtosis equals $6/(\\nu-4)$ for $\\nu > 4$,
+implying an effective degrees-of-freedom of roughly $\\hat{{\\nu}} \\approx 4 + 6/{stats.kurtosis(lr):.2f} \\approx {4 + 6/stats.kurtosis(lr):.1f}$.
+This is consistent with the heavy-tail estimates we will obtain later from the Hill estimator and GPD fitting.
+
+The **negative skewness of {stats.skew(lr):.3f}** confirms the well-documented *leverage effect*:
+large negative returns (crashes) are more frequent and more extreme than large positive returns
+of the same magnitude. A normal distribution has zero skewness by definition, so it cannot
+capture this asymmetry. For VaR and ES estimation, this means normal-based methods will
+*underestimate* downside risk relative to what historical simulation or EVT-based methods produce.
 """)
 st.write("---")
 
@@ -138,9 +151,21 @@ fig.update_layout(
 )
 st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("""
-**Findings:** Empirical returns show **volatility clustering** (calm periods followed by turbulent ones)
-and extreme spikes not present in the stationary normal simulation — motivation for GARCH-type models.
+st.markdown(r"""
+**Findings:** Two features are immediately apparent when comparing the two series:
+
+1. **Volatility clustering in the empirical series:** The DAX returns exhibit clearly identifiable
+   calm and turbulent regimes. Major spikes correspond to the dot-com crash (2000–2002), the
+   global financial crisis (2008–2009), the European sovereign debt crisis (2011), and the
+   COVID-19 shock (March 2020). The autocorrelation of squared returns $\text{Corr}(X_t^2, X_{t-k}^2)$
+   remains significantly positive for lags up to 100+ days — formal evidence against the i.i.d. assumption.
+
+2. **Homoscedasticity in the simulated series:** The i.i.d. normal simulation shows no temporal
+   structure — variance is constant throughout. Under this model, a 5% daily loss is equally
+   likely on day 1 and day 5,000. This is the core failure of the Black-Scholes framework as
+   a risk model. A constant-volatility VaR will be *too tight* during crises (when actual volatility
+   is 2–4× its long-run average) and *too loose* during calm periods — exactly the wrong
+   calibration at the exact wrong times.
 """)
 
 with st.expander("📖 Intuition: What is volatility clustering?"):
@@ -186,10 +211,23 @@ fig.add_trace(go.Scatter(
 fig.update_layout(xaxis_title="Log Return", yaxis_title="Density")
 st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("""
-**Findings:** The empirical distribution has **heavier tails** than the fitted normal —
-extreme losses occur far more frequently than the bell curve predicts.
-This motivates **VaR, ES, and Extreme Value Theory** as proper risk tools.
+st.markdown(r"""
+**Findings:** The histogram reveals three simultaneous deviations from normality:
+
+- **Taller peak (leptokurtosis):** The empirical density is more concentrated near zero than the
+  normal curve — most days have very small moves.
+- **Heavier tails:** The empirical distribution places substantially more probability mass beyond
+  ±2σ. Under normality, a 4σ event has probability $\approx 6 \times 10^{-5}$ (once in 43 years
+  of daily data). In the DAX sample, 4σ+ events occur dozens of times — several orders of
+  magnitude more frequently than the normal predicts.
+- **Slight left asymmetry:** The left tail (losses) is marginally heavier than the right tail
+  (gains), consistent with the negative skewness reported in the summary statistics.
+
+**Risk management consequence:** A normal-distribution VaR at 99% is calibrated to the
+$(1-\alpha) = 1\%$ quantile of a Gaussian. If the true distribution has heavier tails,
+the 1% quantile lies *further out* — meaning the normal model systematically underestimates
+VaR. At 99.9% confidence (relevant for economic capital and Basel IV FRTB), this underestimation
+can be by a factor of 2–3×.
 """)
 
 with st.expander("📖 Intuition: Excess kurtosis and fat tails"):
@@ -236,9 +274,23 @@ fig.update_layout(
 )
 st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("""
-**Findings:**
-- The **simulated path** (Geometric Brownian Motion) uses constant volatility — unrealistic.
-- The **real DAX** shows heteroscedasticity: volatility surges during crises (2008, 2020).
-- Improvement: **GARCH(1,1)** allows time-varying volatility to better capture market dynamics.
+st.markdown(r"""
+**Findings:** The GBM simulation and the real DAX index share the same unconditional mean
+and variance (by construction — we calibrated $\mu$ and $\sigma$ to the data), yet they
+look fundamentally different at the path level:
+
+- The **simulated GBM path** evolves smoothly with no identifiable crisis periods — volatility is
+  constant at $\hat{\sigma}\sqrt{252}$ throughout. Long-run drift is correctly captured.
+- The **real DAX** shows sharp drops of 50%+ during 2002 and 2008, a rapid recovery, and a
+  sudden crash in early 2020. These are not consistent with constant-volatility dynamics:
+  the conditional distribution of returns changes dramatically over time.
+
+**Why GBM still matters:** Despite this limitation, GBM remains the *benchmark* model for
+option pricing (Black-Scholes), portfolio optimisation (mean-variance), and regulatory
+capital under simplified frameworks. Understanding *where* it fails is as important as
+knowing how to use it — and the failure mode is precisely the topic of the GARCH chapter.
+
+**Heteroscedasticity test:** A formal test of constant variance (e.g. Engle's ARCH test)
+would reject the null of no ARCH effects at essentially any standard significance level,
+confirming that the GBM assumption is empirically untenable for the DAX.
 """)

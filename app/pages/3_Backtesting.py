@@ -182,6 +182,30 @@ fig_bar.add_hline(
 fig_bar.update_layout(xaxis_title="Year (approx.)", yaxis_title="# Exceedances")
 st.plotly_chart(fig_bar, use_container_width=True)
 
+st.markdown(fr"""
+**Findings — exceedance rate:** Over {n_valid} trading days with a valid VaR estimate,
+the model recorded **{n_exceed} exceedances** ({exceed_rate*100:.2f}% of observations)
+against an expected rate of {expected_rate*100:.1f}%. This
+{"is close to the theoretical rate" if abs(exceed_rate - expected_rate) < expected_rate * 0.5
+else "deviates materially from the theoretical rate"} — a
+{"favourable" if exceed_rate <= expected_rate * 1.5 else "concerning"} first diagnostic.
+
+**Findings — temporal clustering:** A well-calibrated i.i.d. model would produce exceedances
+scattered uniformly across time. In practice, VaR exceedances cluster in time — most visibly
+during the 2008–2009 global financial crisis and the March 2020 COVID shock. This clustering
+violates the independence assumption underlying the Kupiec test and indicates that the model's
+conditional variance estimate is too slow to react to volatility regime changes. The bar chart
+above makes this explicit: years corresponding to crisis periods show far more violations than
+expected, while calm periods show fewer. This is the empirical motivation for **conditional
+volatility models** (GARCH) over rolling-window estimates with constant weights.
+
+**Normal vs Historical Simulation:** The normal parametric method tends to produce more
+exceedances at high confidence levels (99%) because it underestimates the probability of
+tail events — consistent with the excess kurtosis of the underlying return distribution.
+Historical simulation is non-parametric and therefore inherently captures tail heaviness,
+but it reacts sluggishly to sudden regime changes (all observations in the window are
+equally weighted regardless of age).
+""")
 
 # === SECTION 2: Statistical Backtesting ===
 st.write("---")
@@ -329,11 +353,30 @@ for a in alphas:
 
 st.dataframe(pd.DataFrame(rows).set_index("α"), use_container_width=True)
 
-st.markdown("""
-**Interpretation guide:**
-- **Pass** at all levels → model is well-calibrated
-- **Fail at high α (0.99)** → model underestimates extreme tail risk (common with normal assumption)
-- **Clustered exceedances** → violations are not i.i.d.; GARCH models or conditional VaR would help
+st.markdown(r"""
+**Interpreting the table — three diagnostic patterns:**
+
+1. **Fail only at $\alpha = 0.99$ (normal method):** This is the most common failure mode
+   and directly reflects **leptokurtosis**. The normal distribution underestimates the
+   probability of extreme moves, so the 99% quantile is too low — more than 1% of days
+   exceed it. Historical simulation, which uses empirical quantiles, is immune to this
+   bias (it cannot be wrong about the distributional shape of in-sample data), but it
+   reacts slowly to new volatility regimes.
+
+2. **Pass at all levels:** Statistically consistent with the model. However, a statistical
+   pass is not the same as a correct model — it only means there is insufficient evidence
+   to reject. With $n \approx 6{,}000$ observations, the Kupiec test has limited power
+   against small deviations from $p_0$.
+
+3. **Fail at low $\alpha$ (0.90):** Over-conservative model — produces too few exceedances.
+   This may indicate the estimation window is too long (volatility estimate lags reality)
+   or that a conservative bias was introduced. From a regulatory standpoint, too few
+   violations is less penalised than too many, but over-conservative models waste capital.
+
+**The limitation of the Kupiec test:** Even a perfect pass on this table does not validate
+the model's **conditional coverage**. A model that violates VaR on the same ten days every
+decade passes Kupiec but violates the independence condition — the Christoffersen (1998)
+conditional coverage test addresses this.
 """)
 
 # ================================================================

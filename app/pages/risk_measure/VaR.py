@@ -261,11 +261,27 @@ def render():
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-    st.markdown(f"""
-    **Interpretation:** $\\text{{VaR}}_{{\\alpha={alpha}}} = {var_static:.1f}$ index points.
-    On {(1-alpha)*100:.1f}% of trading days, the loss **exceeds** this threshold.
-    The red shaded area represents the unmodelled **tail risk** — what happens beyond VaR
-    is not captured. This is the key weakness that **Expected Shortfall (ES)** addresses.
+    st.markdown(fr"""
+    **Static VaR benchmark:** The full-sample normal estimate of
+    $\text{{VaR}}_{{{alpha}}} = {var_static:.1f}$ index points assumes constant volatility
+    throughout the entire 2000–2024 period. The rolling VaR chart above reveals why this
+    is inadequate: the VaR estimate nearly doubles during crisis periods (2008–2009, 2020)
+    relative to calm periods — the conditional distribution of returns changes dramatically
+    over time, and a static estimate is simultaneously over-conservative in calm markets
+    and dangerously under-conservative during crises.
+
+    **The tail blindness problem:** The red shaded region — the $(1-\alpha)\%$ of the
+    distribution that exceeds VaR — is entirely ignored by the risk measure. VaR provides
+    no information about the *magnitude* of losses in this region. A loss of VaR + 1
+    and a loss of 10× VaR are treated identically: both are "exceedances." This is the
+    fundamental motivation for Expected Shortfall, which averages over all losses in this tail.
+
+    **Exceedance rate interpretation:** The observed exceedance rate of {exceed_pct:.2f}%
+    should be compared to the theoretical {expected_pct:.1f}%. A higher observed rate
+    (common with the normal method at 99%) reflects **tail underestimation** — the normal
+    distribution's quantile is too low relative to the empirical tail. Historical simulation
+    should match the expected rate more closely in-sample but may fail out-of-sample
+    if the volatility regime changes.
     """)
 
     # ------------------------------------------------------------------ #
@@ -351,9 +367,23 @@ def render():
     )
     st.plotly_chart(fig_vcm, use_container_width=True)
 
-    st.markdown(f"""
-    **Portfolio:** {dict(zip(STOCK_NAMES_VCM, default_weights.tolist()))} shares.
-    The VCM uses the full **5×5 covariance matrix** of log returns, updated daily on a
-    rolling 252-day window. Correlations between stocks reduce portfolio variance below
-    the sum of individual variances — the mathematical expression of diversification.
+    st.markdown(fr"""
+    **Portfolio composition:** {dict(zip(STOCK_NAMES_VCM, default_weights.tolist()))} shares.
+    The VCM uses the full **5×5 covariance matrix** $\hat{{\Sigma}}_n$ of log returns,
+    estimated daily over a rolling 252-day window. Portfolio variance is
+    $\hat{{\sigma}}_P^2 = \mathbf{{w}}_n^\top \hat{{\Sigma}}_n \mathbf{{w}}_n$ — the
+    cross-asset covariances reduce this below the sum of individual variances,
+    which is the mathematical expression of **diversification**.
+
+    **Exceedance rate:** The portfolio exceedance rate of {n_vcm_exceed / n_vcm_valid * 100:.2f}%
+    (vs expected {(1-alpha)*100:.1f}%) reveals how well the normality assumption holds for
+    the portfolio. Even if individual stocks are non-normal, the central limit theorem
+    suggests portfolio returns converge toward normality as more assets are added —
+    but with only 5 stocks this convergence is far from complete.
+
+    **VCM limitation:** The covariance matrix $\hat{{\Sigma}}_n$ is estimated with equal
+    weights on all 252 past days. Like the single-asset rolling VaR, it reacts sluggishly
+    to volatility regime changes — the well-known **ghost effect** where the impact of a
+    crisis disappears abruptly when its window rolls out. The GARCH chapter addresses this
+    by weighting recent observations more heavily via the recursive variance equation.
     """)

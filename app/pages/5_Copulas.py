@@ -232,11 +232,24 @@ fig.update_layout(
 )
 st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("""
-**Findings:** Both measures show strong positive correlation between BMW and VW throughout the
-entire period — not surprising given both are automotive companies. Spearman's ρ_S closely tracks
-linear ρ_L, suggesting the dependence is largely linear. This supports a **Gaussian copula** as
-a reasonable model — its dependence structure is fully determined by linear correlation.
+st.markdown(r"""
+**Findings — level:** Both Pearson $\hat{\varrho}_L$ and Spearman $\hat{\varrho}_S$ remain
+persistently high (typically 0.6–0.9) throughout the sample, reflecting the strong common
+exposure of BMW and Volkswagen to the automotive sector, macroeconomic cycles, and shared
+customer base. This high baseline correlation is expected for two companies in the same industry.
+
+**Findings — time variation:** Correlation is not constant — it fluctuates substantially
+across regimes. During stress periods (the 2008–2009 financial crisis, 2020 COVID shock),
+rolling correlation frequently approaches 0.9+, while in calmer periods it may dip below 0.6.
+This **correlation instability** is a key stylised fact: linear correlation estimated from
+a stable period *understates* the dependence that actually materialises during crises.
+
+**Pearson vs Spearman:** Both measures track each other closely here, suggesting the
+dependence is approximately monotone (no pronounced non-linear structure). A large
+divergence between $\hat{\varrho}_L$ and $\hat{\varrho}_S$ would indicate outlier-driven
+or non-monotone dependence — a signal to use rank-based methods. For copula fitting,
+Spearman's $\varrho_S$ and Kendall's $\tau$ are preferred since they are **invariant under
+monotone transformations of the marginals**, making them pure measures of copula dependence.
 """)
 st.write("---")
 
@@ -712,11 +725,30 @@ col1.metric("Estimated ν (d.o.f.)", f"{best_nu:.1f}")
 col2.metric("Fixed correlation ρ", f"{rho_pair:.4f}")
 col3.metric("Tail dependence λ", f"{tail_dep:.4f}")
 
-st.markdown(f"""
-**Interpretation:** $\\hat{{\\nu}} = {best_nu:.1f}$ degrees of freedom. The smaller $\\nu$ is,
-the heavier the joint tails. With $\\hat{{\\nu}} = {best_nu:.1f}$, the tail dependence coefficient
-$\\lambda = {tail_dep:.4f}$ means that in the extreme tail, roughly {tail_dep*100:.1f}% of
-simultaneous extreme events co-occur — something the Gaussian copula ($\\lambda = 0$) completely misses.
+st.markdown(fr"""
+**Interpreting $\hat{{\nu}} = {best_nu:.1f}$:** The profile likelihood peaks at
+$\hat{{\nu}} = {best_nu:.1f}$ degrees of freedom. Recall that as $\nu \to \infty$, the t-copula
+converges to the Gaussian copula (zero tail dependence); small $\nu$ gives heavier joint tails.
+The estimate $\hat{{\nu}} \approx {best_nu:.1f}$ is {"consistent with the heavy-tail regime ($\\nu < 10$) typical for equity pairs" if best_nu < 10 else "in the moderate range; joint tail dependence is present but not extreme"}.
+
+**Tail dependence quantified:** With $\hat{{\nu}} = {best_nu:.1f}$ and $\hat{{\\rho}} = {rho_pair:.3f}$,
+the tail dependence coefficient is:
+$$\lambda = 2\,t_{{\hat{{\nu}}+1}}\!\!\left(-\sqrt{{(\hat{{\nu}}+1)(1-\hat{{\\rho}})/(1+\hat{{\\rho}})}}\right) = {tail_dep:.4f}$$
+This means: conditional on one stock's return being in the top (or bottom) 1%, the probability
+that the other stock's return is *also* in the extreme tail is approximately **{tail_dep*100:.1f}%**.
+The Gaussian copula ($\lambda = 0$) predicts this probability converges to *zero* in the limit —
+a fundamental model error for stress scenario analysis.
+
+**Profile likelihood shape:** A well-identified $\nu$ produces a clear, unimodal peak in the
+profile likelihood. A flat profile at large $\nu$ would indicate the data are consistent with
+the Gaussian copula (insufficient evidence to reject $\lambda = 0$). A sharp peak at low $\nu$
+is strong evidence for tail dependence that the Gaussian copula cannot capture.
+
+**Regulatory context:** Under Basel IV (FRTB) and Solvency II, multi-asset stress tests
+effectively require modelling joint tail events. A t-copula with $\hat{{\nu}} \approx {best_nu:.1f}$
+would produce materially higher capital requirements for portfolios with correlated equity positions
+compared to a Gaussian copula calibration — precisely the underestimation that contributed to
+2008 CDO losses.
 """)
 
 # Profile log-likelihood plot

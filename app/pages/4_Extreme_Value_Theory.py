@@ -178,10 +178,21 @@ fig_qq.update_layout(
 )
 st.plotly_chart(fig_qq, use_container_width=True)
 
-st.markdown("""
-**Reading the plot:** Points **above** the 45° line in the upper-right mean the empirical tail
-is **heavier** than the reference. The normal distribution shows the strongest deviation;
-the t-distribution with low degrees of freedom fits better — confirming fat tails.
+st.markdown(r"""
+**Findings:** Under the normal reference, the characteristic **S-shape** is immediately visible:
+empirical quantiles lie *above* the reference line in the upper-right tail (losses are more
+extreme than the normal predicts) and *below* in the lower-left (gains are also more extreme).
+This simultaneous deviation in both tails is the signature of **leptokurtosis** — the
+distribution is more peaked at the centre and heavier in the tails than the normal.
+
+Switching to **Student-t ($\nu = 4$ or $\nu = 6$)** substantially improves the tail fit:
+the S-curve flattens because the t-distribution's power-law tails better match the
+empirical extremes. However, even the t-fit is imperfect in the very extreme quantiles —
+consistent with the finding from the histogram (Section 1 in Explore Data) that a single
+parametric family cannot perfectly describe both the centre and the extreme tail.
+
+This visual evidence motivates EVT: rather than forcing a global parametric fit, EVT focuses
+exclusively on the tail region above a high threshold, where the GPD approximation is valid.
 """)
 st.write("---")
 
@@ -303,10 +314,29 @@ k_ref = st.slider("Read off ξ at k =", min_value=k_min, max_value=k_max, value=
 xi_at_k = hill_estimates[k_ref - k_min]
 st.metric(f"ξ̂(k={k_ref})", f"{xi_at_k:.4f}")
 
-st.markdown(f"""
-**Interpretation:** $\\hat{{\\xi}} \\approx {xi_at_k:.3f}$ indicates a **heavy-tailed distribution**.
-Finite moments exist only up to order $1/\\hat{{\\xi}} \\approx {1/xi_at_k:.1f}$.
-In particular, the distribution has finite variance ($\\xi < 0.5$) but potentially heavy kurtosis.
+st.markdown(fr"""
+**Reading the Hill plot:** Reliability requires the estimator to form a **stable plateau** —
+a region of $k$ values where $\hat{{\xi}}_k$ fluctuates around a constant level before
+either rising (upward bias from including non-tail observations) or falling (downward bias
+from too few order statistics). At $k = {k_ref}$, $\hat{{\xi}} \approx {xi_at_k:.3f}$.
+
+**Benchmark comparison:** For major equity indices, the EVT literature consistently estimates
+$\xi \in (0.2, 0.4)$, corresponding to Student-t tail behaviour with effective degrees of
+freedom $\hat{{\nu}} = 1/\hat{{\xi}} \approx {1/xi_at_k:.1f}$. The current estimate is
+{"within" if 0.2 <= xi_at_k <= 0.4 else "outside"} this benchmark range.
+
+**Moment conditions:** A regularly varying distribution with index $1/\hat{{\xi}}$ has
+finite moments up to order $p < 1/\hat{{\xi}} \approx {1/xi_at_k:.1f}$. In particular:
+- Finite mean requires $\xi < 1$ ✅ (always satisfied here)
+- Finite variance requires $\xi < 0.5$ {"✅" if xi_at_k < 0.5 else "❌"} ($\hat{{\xi}} = {xi_at_k:.3f}$)
+- Finite kurtosis requires $\xi < 0.25$ {"✅" if xi_at_k < 0.25 else "❌"} — this is where
+  the normal-based kurtosis estimate breaks down if $\xi \geq 0.25$.
+
+**Capital implications:** Under regular variation, the ES formula gives
+$\widehat{{\text{{ES}}}}_\alpha = \widehat{{\text{{VaR}}}}_\alpha / (1 - \hat{{\xi}})$.
+With $\hat{{\xi}} \approx {xi_at_k:.3f}$, ES exceeds VaR by a factor of
+$1/(1-{xi_at_k:.3f}) \approx {1/(1-xi_at_k):.2f}$ — a substantial tail severity premium
+that normal-based models miss entirely.
 """)
 st.write("---")
 
@@ -356,10 +386,25 @@ fig_mep.update_layout(
 )
 st.plotly_chart(fig_mep, use_container_width=True)
 
-st.markdown("""
-**Reading the plot:** Look for the region where $e(u)$ becomes **approximately linear**.
-That point is the optimal threshold $u^*$ for the POT method.
-A strongly upward slope confirms a heavy (Pareto) tail.
+st.markdown(r"""
+**Reading the plot — what the slope tells you:** For a GPD-distributed excess distribution,
+$e(u) = (\sigma + \xi u)/(1-\xi)$, so the slope of the linear section equals $\xi/(1-\xi)$.
+A **positive slope** therefore directly confirms $\xi > 0$ — a Pareto-type heavy tail.
+A slope near zero would indicate an exponential tail ($\xi = 0$), and a downward slope
+would indicate a bounded tail ($\xi < 0$, rare in financial returns).
+
+**Threshold selection:** The optimal threshold $u^*$ is the lowest value of $u$ from which
+$e(u)$ is approximately linear (upward). Choosing $u^*$ too low includes non-tail observations
+that corrupt the GPD fit; too high leaves too few exceedances for reliable MLE estimation.
+
+**The right tail vs the turn-down:** It is normal for the plot to become erratic or turn
+downward at very high thresholds — when only 5–10 observations remain above $u$, the
+sample mean excess is dominated by noise. Disregard the rightmost portion and focus on
+the stable linear region in the middle of the plot.
+
+**Bias-variance tradeoff:** This threshold choice is the central estimation challenge of
+the POT method — the same bias-variance tradeoff as in kernel density estimation.
+Automated threshold selection methods (e.g. Wadsworth or Bader-Yan) formalise this.
 """)
 st.write("---")
 
@@ -498,11 +543,26 @@ else:
 
         st.dataframe(pd.DataFrame(evt_rows).set_index("α"), use_container_width=True)
 
-        st.markdown(f"""
-        **Key finding:** EVT-based estimates are **larger** than normal estimates at high confidence
-        levels — reflecting the fat tail that the normal distribution underestimates. The difference
-        grows with $\\alpha$ and is most pronounced at extreme levels like $\\alpha = 0.999$
-        (the "1-in-1000" day).
+        st.markdown(fr"""
+        **Reading the table — divergence by confidence level:** The gap between EVT and normal
+        estimates is small near $\alpha = 0.95$ (both methods are still anchored in the body
+        of the sample distribution), but grows substantially at $\alpha \geq 0.99$ and is most
+        pronounced at $\alpha = 0.999$.
+
+        **Why the divergence accelerates:** The normal quantile grows logarithmically as
+        $\Phi^{{-1}}(\alpha) \sim \sqrt{{2\log(1/(1-\alpha))}}$, while the GPD quantile grows
+        as $(1-\alpha)^{{-\xi}}$ — a power law. For $\hat{{\xi}} \approx {xi_fit:.2f}$, the
+        ratio $\text{{VaR}}_\alpha^{{\text{{EVT}}}}/\text{{VaR}}_\alpha^{{\text{{Normal}}}}$
+        grows without bound as $\alpha \to 1$. At $\alpha = 0.999$, this factor can easily
+        reach 2–3× — meaning the normal model requires only one-third the capital that EVT
+        prescribes for a 1-in-1000 scenario.
+
+        **Regulatory context:** Solvency II requires the 99.5% one-year VaR; FRTB uses 97.5% ES.
+        Both are in the region where the EVT–normal divergence is already material.
+        The EVT estimate is therefore the appropriate reference for regulatory capital calculations.
+        ES values are also substantially larger than VaR at all levels, reflecting the heavy-tail
+        severity captured by $\hat{{\xi}} \approx {xi_fit:.2f} > 0$: $\text{{ES}}_\alpha /
+        \text{{VaR}}_\alpha \approx 1/(1-\hat{{\xi}}) \approx {1/(1-xi_fit):.2f}$.
         """)
 
         # Tail CDF plot
@@ -544,11 +604,23 @@ else:
         )
         st.plotly_chart(fig_tail, use_container_width=True)
 
-        st.markdown("""
-        **Log-scale tail plot:** The GPD (red) hugs the empirical tail much more closely than
-        the Normal (orange), which underestimates extreme probabilities. This is why EVT-based
-        VaR and ES estimates are larger — and more realistic — than normal-distribution estimates
-        at high confidence levels.
+        st.markdown(r"""
+        **Log-scale tail plot — what to look for:** On a log-scale, an **exponential** survival
+        function $P(L>x) = e^{-\lambda x}$ appears as a straight line with negative slope.
+        A **power-law** survival function $P(L>x) \sim x^{-1/\xi}$ appears as a straight line
+        with slope $-1/\xi$ on a **log-log** scale — meaning it curves *upward* on the
+        log-linear scale used here, decaying more slowly than exponential.
+
+        **The three curves:** The empirical tail (blue dots) clearly lies *above* the normal
+        (orange) in the extreme region — the data decays more slowly than the normal predicts.
+        The GPD (red) follows the empirical tail closely, capturing the power-law decay.
+        The normal curve collapses too rapidly because its super-exponential tails $e^{-x^2/2}$
+        are incompatible with the polynomial decay that the data exhibit.
+
+        **Practical consequence:** At $P(L>x) = 0.1\%$ (1-in-1000 day), the normal model
+        places the threshold substantially *below* the GPD estimate — meaning normal-based
+        models allocate insufficient capital for low-frequency, high-severity events.
+        This is precisely the failure mode that EVT was designed to correct.
         """)
 
     except Exception as e:
