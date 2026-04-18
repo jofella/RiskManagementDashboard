@@ -299,13 +299,11 @@ def render():
     Assuming $X_{n+1} \mid \mathcal{F}_n \sim \mathcal{N}(\hat{\mu}_n,\, \hat{\Sigma}_n)$
     (multivariate normal with rolling estimates), the portfolio loss is also normal:
 
-    $$L^\Delta_{n+1} \mid \mathcal{F}_n \;\sim\; \mathcal{N}\!\left(-\mathbf{w}_n^\top\hat{\mu}_n,\;
-    \mathbf{w}_n^\top \hat{\Sigma}_n \mathbf{w}_n\right)$$
+    $$L^\Delta_{n+1} \mid \mathcal{F}_n \;\sim\; \mathcal{N}\!\left(-\mathbf{w}_n^\top\hat{\mu}_n,\; \mathbf{w}_n^\top \hat{\Sigma}_n \mathbf{w}_n\right)$$
 
     so the VaR reduces to a closed-form expression:
 
-    $$\text{VaR}_\alpha^{\text{VCM}} = -\mathbf{w}_n^\top \hat{\mu}_n +
-    \sqrt{\mathbf{w}_n^\top \hat{\Sigma}_n \mathbf{w}_n}\cdot \Phi^{-1}(\alpha)$$
+    $$\mathrm{VaR}_\alpha^{\mathrm{VCM}} = -\mathbf{w}_n^\top \hat{\mu}_n + \sqrt{\mathbf{w}_n^\top \hat{\Sigma}_n \mathbf{w}_n}\cdot \Phi^{-1}(\alpha)$$
 
     The key advantage over single-asset VaR: the covariance matrix $\hat{\Sigma}_n$ captures
     **cross-asset correlations**, so diversification effects are automatically reflected.
