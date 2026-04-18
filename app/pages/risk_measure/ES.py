@@ -67,6 +67,58 @@ def render():
     where $\\phi$ is the standard normal PDF and $\\Phi^{-1}$ is the quantile function.
     """)
 
+    with st.expander("📖 Three representations of ES — and which to use when"):
+        st.markdown(r"""
+        ES has three equivalent representations for **continuous** loss distributions:
+
+        **1. Conditional expectation (most intuitive):**
+        $$\text{ES}_\alpha(L) = E[L \mid L > \text{VaR}_\alpha(L)]$$
+        *"The expected loss given that VaR is exceeded."* Easy to explain to management.
+
+        **2. Integral of VaR (most useful analytically):**
+        $$\text{ES}_\alpha(L) = \frac{1}{1-\alpha} \int_\alpha^1 \text{VaR}_u(L)\, du$$
+        *"ES is the average of all VaR levels above $\alpha$."* This connects ES to the entire
+        upper tail of the loss distribution, not just the conditional mean. Useful for proving
+        subadditivity and for computing ES analytically from a known distribution.
+
+        **3. Worst-case expectation (most theoretical):**
+        $$\text{ES}_\alpha(L) = \sup_{Q \ll P,\, \frac{dQ}{dP} \leq \frac{1}{1-\alpha}} E^Q[L]$$
+        *"ES is the maximum expected loss over all scenarios that weight no event more than
+        $1/(1-\alpha)$ times its physical probability."* This is the **generalised scenarios**
+        interpretation and connects ES to the theory of coherent risk measures (Artzner et al.).
+
+        | Representation | Best used for... |
+        |---|---|
+        | Conditional expectation | Intuitive explanation, backtesting |
+        | Integral of VaR | Analytical computation, proving subadditivity |
+        | Worst-case expectation | Theoretical justification, robust risk measures |
+        """)
+
+    with st.expander("📖 ES for discontinuous distributions — why the definition must change"):
+        st.markdown(r"""
+        For a **continuous** loss distribution, $P(L = \text{VaR}_\alpha) = 0$, so the
+        conditional expectation $E[L \mid L > \text{VaR}_\alpha]$ is well-defined and equals ES.
+
+        For a **discrete or mixed distribution** (e.g. credit losses with point mass at zero),
+        the CDF may have a jump at $\text{VaR}_\alpha$. This creates a problem:
+
+        *Example:* Suppose $L = 0$ with probability 99% and $L = 100$ with probability 1%.
+        At $\alpha = 98\%$, $\text{VaR}_{98\%} = 0$. But $P(L > 0) = 1\% < 2\% = 1-\alpha$,
+        so the conditional event $\{L > 0\}$ captures only 1% of probability mass, not 2%.
+        The naive formula $E[L \mid L > \text{VaR}_\alpha] = 100$ is correct here,
+        but in other discrete cases it double-counts mass at the jump point.
+
+        **The correct general definition** uses the integral representation:
+        $$\text{ES}_\alpha(L) = \frac{1}{1-\alpha} \int_\alpha^1 F_L^\leftarrow(u)\, du$$
+        This always gives the correct answer regardless of continuity, because it integrates
+        over quantile levels $u \in [\alpha, 1]$ — sweeping through the tail uniformly.
+
+        **Practical implication:** When computing ES empirically (historical simulation),
+        you should average the losses *strictly above* VaR plus a fraction of the loss *at* VaR
+        to exactly fill the remaining probability mass to $1-\alpha$. Most implementations
+        ignore this subtlety at the cost of small errors near discrete mass points.
+        """)
+
     with st.expander("📖 Intuition: ES in plain language"):
         st.markdown(r"""
         If VaR is the **flood line**, ES is the **average flood depth above that line**.

@@ -100,6 +100,33 @@ expected_count = n_valid * expected_rate
 exceedance_idx = np.where((losses > var_rolling) & valid_mask)[0]
 
 
+with st.expander("📖 Empirical distribution, empirical quantile and empirical ES — formal definitions"):
+    st.markdown(r"""
+    Given an i.i.d. sample $L_1, \ldots, L_n$, all three empirical counterparts are defined
+    as plug-in replacements for the unknown population quantities.
+
+    **Empirical distribution function:**
+    $$\hat{F}_n(x) = \frac{1}{n} \sum_{i=1}^n \mathbf{1}_{L_i \leq x}$$
+    This is the fraction of observations $\leq x$. By the **Glivenko–Cantelli theorem**,
+    $\sup_x |\hat{F}_n(x) - F(x)| \to 0$ almost surely — so $\hat{F}_n$ converges uniformly
+    to $F$, justifying the use of historical simulation.
+
+    **Empirical quantile (historical simulation VaR):**
+    $$\widehat{\text{VaR}}_\alpha = \hat{F}_n^\leftarrow(\alpha) = L_{(\lceil n\alpha \rceil)}$$
+    where $L_{(1)} \leq L_{(2)} \leq \cdots \leq L_{(n)}$ are the **order statistics**.
+    The empirical quantile is the $\lceil n\alpha \rceil$-th smallest loss — for $n = 250$ and
+    $\alpha = 99\%$, this is the **3rd largest loss** in the sample.
+
+    **Empirical ES:**
+    $$\widehat{\text{ES}}_\alpha = \frac{1}{n(1-\alpha)} \sum_{i=1}^n L_i \cdot \mathbf{1}_{L_i > \widehat{\text{VaR}}_\alpha}$$
+    The average of all losses strictly above the empirical VaR. (For the exact discrete correction
+    at the boundary, see the ES page.)
+
+    **Plug-in estimation principle:** Replace the unknown CDF $F$ with $\hat{F}_n$ everywhere.
+    The resulting estimator inherits consistency from the Glivenko–Cantelli theorem and is
+    asymptotically normal at rate $\sqrt{n}$ for interior quantiles (Bahadur representation).
+    """)
+
 # === SECTION 1: Visual Backtesting ===
 st.header("1. Visual Backtesting")
 st.caption(

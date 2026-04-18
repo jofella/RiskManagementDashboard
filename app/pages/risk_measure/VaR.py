@@ -43,6 +43,56 @@ def render():
     $\\text{VaR}_\\alpha$. Equivalently, there is a $(1-\\alpha)$ chance of exceeding it.
     """)
 
+    with st.expander("📖 Quantile functions and generalised inverses (F←)"):
+        st.markdown(r"""
+        The VaR is formally defined as the **generalised inverse** (also called the quantile function)
+        of the loss CDF $F_L$:
+
+        $$\text{VaR}_\alpha(L) = F_L^\leftarrow(\alpha) = \inf\{l \in \mathbb{R} : F_L(l) \geq \alpha\}$$
+
+        **Why the infimum?** For a continuous, strictly increasing CDF, $F^\leftarrow(\alpha)$ is just
+        the unique $l$ with $F(l) = \alpha$. But if $F$ has **jumps** (e.g. discrete distributions)
+        or **flat parts**, the inverse is not unique — we take the infimum to get a well-defined value.
+
+        **Key properties:**
+        - $F^\leftarrow(F(x)) \leq x$ always; equality holds **if** $F$ is continuous at $x$.
+        - $F(F^\leftarrow(\alpha)) \geq \alpha$ always; equality holds **if** $F$ has no jump at $F^\leftarrow(\alpha)$.
+        - For continuous $F$: $F^\leftarrow(F(x)) = x$ and $F(F^\leftarrow(\alpha)) = \alpha$ — both hold.
+
+        **Practical implication:** When we say $\text{VaR}_{99\%} = q$, we mean $F_L(q) \geq 0.99$ and
+        $F_L(q^-) < 0.99$. For continuous loss distributions (the common case in market risk),
+        this simplifies to $F_L(\text{VaR}_\alpha) = \alpha$ exactly.
+
+        **Connection to historical simulation:** The empirical quantile $\hat{F}_n^\leftarrow(\alpha)$
+        is just the $\lceil n\alpha \rceil$-th order statistic $X_{(\lceil n\alpha \rceil)}$ —
+        the smallest observation such that at least fraction $\alpha$ of the data lies below it.
+        """)
+
+    with st.expander("📖 Is VaR convex? Why does it matter?"):
+        st.markdown(r"""
+        A risk measure $\varrho$ is **convex** if for $\lambda \in [0,1]$:
+
+        $$\varrho(\lambda L_1 + (1-\lambda) L_2) \leq \lambda \varrho(L_1) + (1-\lambda)\varrho(L_2)$$
+
+        Convexity means *mixing two positions cannot increase risk above the weighted average* —
+        a diversification principle.
+
+        **VaR is generally NOT convex.** The same bond counterexample shows this:
+        - $L_1$: lose €100 with probability 1%, zero otherwise. $\text{VaR}_{99\%}(L_1) = 0$.
+        - $L_2 = L_1$ (same bond, identical risk). $\text{VaR}_{99\%}(L_2) = 0$.
+        - Mix $\lambda = 0.5$: $0.5 L_1 + 0.5 L_2 = L_1$ (since $L_1 = L_2$). Still $\text{VaR}_{99\%} = 0$.
+
+        But for two *different* independent bonds of the same type:
+        - $\text{VaR}_{99\%}(0.5 L_1 + 0.5 L_2) > 0$ because $P(\text{at least one defaults}) \approx 2\%$.
+        - Yet $0.5 \text{VaR}_{99\%}(L_1) + 0.5 \text{VaR}_{99\%}(L_2) = 0$.
+
+        **Why it matters:** Non-convexity means a portfolio desk could split one position into two
+        sub-positions and *reduce* reported VaR without actually reducing risk. This creates regulatory
+        arbitrage and incentivises fragmentation of risk that VaR cannot detect.
+
+        **ES is convex** (and subadditive), which is why it closes this loophole.
+        """)
+
     with st.expander("📖 Intuition: VaR in plain language"):
         st.markdown(r"""
         **$\text{VaR}_{99\%} = €1\text{M}$** means: *"On 99 out of 100 trading days, we will

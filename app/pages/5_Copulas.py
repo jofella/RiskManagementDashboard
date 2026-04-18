@@ -84,6 +84,63 @@ with st.expander("📖 Intuition: What is a copula in plain language?"):
     This is impossible with a bivariate normal assumption.
     """)
 
+with st.expander("📖 Comonotonicity and countermonotonicity — the extreme dependence cases"):
+    st.markdown(r"""
+    Two random variables $X_1, X_2$ are **comonotone** if they always move in the same direction:
+    formally, $(X_1(\omega) - X_1(\omega'))(X_2(\omega) - X_2(\omega')) \geq 0$ a.s.
+    Equivalently, they share the same increasing transformation of a single uniform: $X_i = F_i^\leftarrow(U)$.
+
+    **Comonotonicity = the worst possible dependence for a risk manager.** If $X_1$ is your
+    equity portfolio and $X_2$ is your bond portfolio, comonotonicity means when equities crash,
+    bonds crash equally hard — no diversification whatsoever. The copula of a comonotone pair
+    is the **upper Fréchet bound** $M(u_1, u_2) = \min(u_1, u_2)$.
+
+    Two variables are **countermonotone** if they always move in opposite directions:
+    $X_2 = g(X_1)$ for some strictly decreasing $g$. This is the maximum diversification case.
+    The copula is the **lower Fréchet bound** $W(u_1, u_2) = \max(u_1 + u_2 - 1, 0)$.
+
+    **Fréchet–Hoeffding bounds:** For any bivariate copula $C$:
+    $$W(u_1, u_2) \leq C(u_1, u_2) \leq M(u_1, u_2)$$
+
+    Real portfolios lie strictly between these bounds — some diversification, but never perfect.
+    The **independence copula** $\Pi(u_1, u_2) = u_1 u_2$ sits in the interior.
+    """)
+
+with st.expander("📖 Spherical and elliptical distributions — the class behind Gaussian and t-copulas"):
+    st.markdown(r"""
+    ### Spherical distributions
+    A random vector $X \in \mathbb{R}^d$ is **spherical** if its distribution is invariant under
+    all orthogonal transformations: $OX \overset{d}{=} X$ for all orthogonal $O$.
+
+    Equivalently, $X \overset{d}{=} R \cdot U$ where $R \geq 0$ is a radial component and
+    $U$ is uniform on the unit sphere, independent of $R$. Examples: $\mathcal{N}(0, I_d)$,
+    multivariate t with equal variances and zero mean.
+
+    ### Elliptical distributions
+    $X$ is **elliptical** with location $\mu$ and dispersion matrix $\Sigma$ if
+    $X \overset{d}{=} \mu + A Z$ where $Z$ is spherical and $\Sigma = A A^\top$.
+
+    **Properties relevant for risk management:**
+    - Linear combinations $a^\top X$ are always univariate elliptical — portfolio losses
+      remain in the same family as individual asset returns.
+    - Covariance matrix $\Sigma$ fully characterises dependence structure (for fixed generator).
+    - VaR and ES are **sub-additive for elliptical distributions** (even for VaR!) —
+      because the loss distribution is symmetric and the VCM formula is exact.
+
+    ### Examples
+    | Distribution | Spherical? | Elliptical? | Tail dependence |
+    |---|---|---|---|
+    | $\mathcal{N}(0, I)$ | ✅ | ✅ (special case) | ❌ None |
+    | $\mathcal{N}(\mu, \Sigma)$ | ❌ (unless $\mu=0, \Sigma=I$) | ✅ | ❌ None |
+    | Multivariate t($\nu, \Sigma$) | ❌ | ✅ | ✅ $\lambda = 2t_{\nu+1}(-\sqrt{(\nu+1)(1-\rho)/(1+\rho)})$ |
+    | Cauchy | ✅ | ✅ | ✅ Very heavy |
+
+    **The t-distribution as a normal variance mixture:**
+    $$X = \frac{Z}{\sqrt{W/\nu}}, \quad Z \sim \mathcal{N}(0, \Sigma),\quad W \sim \chi^2_\nu$$
+    This scale mixture representation shows why $\nu \to \infty$ gives normality and small $\nu$
+    gives heavy tails — $W$ introduces random variance scaling, creating tail dependence.
+    """)
+
 with st.expander("📖 Why did the Gaussian copula fail in 2008?"):
     st.markdown(r"""
     The Gaussian copula was used extensively to price **Collateralised Debt Obligations (CDOs)** —
@@ -322,6 +379,7 @@ $\lambda_\ell = 2^{-1/\vartheta}$ but no upper tail dependence ($\lambda_u = 0$)
 The **reverse Clayton copula** $C_\vartheta^{\text{rCl}}$ flips this: $\tilde{U} = 1 - U$ has a
 Clayton copula. It has upper tail dependence $\lambda_u = 2^{-1/\vartheta}$ and $\lambda_\ell = 0$.
 
+Clayton belongs to the **Archimedean copula** family — a broad class with a simple algebraic structure.
 **Sampling via the Marshall-Olkin method:**
 1. Draw $V \sim \text{Gamma}(1/\vartheta, 1)$
 2. Draw $\tilde{U}_1, \tilde{U}_2 \sim \text{Uniform}(0,1)$ independently
@@ -408,6 +466,36 @@ required capital reserve by **{(var_dep/var_ind - 1)*100:.1f}%** vs the independ
 ({var_dep/1000:.2f} vs {var_ind/1000:.2f} Mio €). Ignoring tail dependence leads to systematic
 **underestimation of catastrophic risk** — a crucial insight for insurance solvency (Solvency II).
 """)
+
+with st.expander("📖 Archimedean copulas and completely monotone functions"):
+    st.markdown(r"""
+    An **Archimedean copula** is defined via a **generator function** $\psi: [0,\infty) \to [0,1]$:
+
+    $$C(u_1, \ldots, u_d) = \psi\!\left(\psi^{-1}(u_1) + \cdots + \psi^{-1}(u_d)\right)$$
+
+    For this to be a valid $d$-dimensional copula, $\psi$ must be **completely monotone**:
+
+    $$(-1)^k \psi^{(k)}(t) \geq 0 \quad \text{for all } t \geq 0 \text{ and all } k = 0, 1, 2, \ldots$$
+
+    By **Bernstein's theorem**, a function is completely monotone iff it is the Laplace transform
+    of a non-negative measure — equivalently, iff it can be written as $\psi(t) = E[e^{-tV}]$
+    for some non-negative random variable $V$. This gives the Marshall-Olkin sampling method:
+    draw $V$ from the appropriate distribution and then use it to generate correlated uniforms.
+
+    **Common Archimedean copulas:**
+
+    | Copula | Generator $\psi(t)$ | Frailty $V$ | Tail dependence |
+    |---|---|---|---|
+    | **Clayton($\vartheta$)** | $(1+t)^{-1/\vartheta}$ | $\text{Gamma}(1/\vartheta, 1)$ | Lower: $2^{-1/\vartheta}$ |
+    | **Gumbel($\vartheta$)** | $e^{-t^{1/\vartheta}}$ | Stable($1/\vartheta$) | Upper: $2 - 2^{1/\vartheta}$ |
+    | **Frank($\vartheta$)** | $-\frac{1}{\vartheta}\log\frac{e^{-\vartheta t}-1}{e^{-\vartheta}-1}$ | Logarithmic | None ($\lambda_u = \lambda_l = 0$) |
+    | **Independence** | $e^{-t}$ | $\delta_1$ | None |
+
+    **Why completely monotone?** It ensures $C$ is a valid copula in *all* dimensions $d \geq 2$.
+    A generator that is completely monotone in 2D but not in higher dimensions would give
+    invalid joint distributions for portfolios with more than 2 assets.
+    """)
+
 st.write("---")
 
 

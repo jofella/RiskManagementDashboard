@@ -17,6 +17,19 @@ but, through contagion, the broader financial system. This **systemic dimension*
 management is subject to strict regulatory oversight (Basel II/III/IV for banks, Solvency II for
 insurers) and why the quantification of losses is the foundation of all modern risk frameworks.
 
+### The Three Categories of Financial Risk
+Before building any model, it is useful to understand what type of risk we are dealing with:
+
+| Risk type | Definition | Examples |
+|---|---|---|
+| **Market risk** | Loss from adverse movements in market prices | Stock crashes, interest rate rises, FX moves, commodity price shocks |
+| **Credit risk** | Loss from counterparty default or deterioration in creditworthiness | Bond defaults, loan non-repayment, rating downgrades |
+| **Operational risk** | Loss from failed internal processes, people, systems, or external events | IT failures, fraud, legal liability, natural disasters |
+
+This dashboard focuses primarily on **market risk**, which admits the most tractable mathematical
+treatment via loss distributions and risk measures. The tools (VaR, ES, copulas) extend naturally
+to credit portfolios and, with modification, to operational risk.
+
 ### Three Central Questions
 Any rigorous risk management framework must answer:
 
@@ -42,6 +55,30 @@ where $X_{n+1} = Z_{n+1} - Z_n$ are the **risk factor changes** and $\ell_{[n]}$
 is the key modelling insight: it allows us to study the loss distribution independently
 of specific portfolio choices.
 """)
+
+with st.expander("📖 The five steps of risk management — and what can go wrong"):
+    st.markdown(r"""
+    Any applied risk management process follows five steps:
+
+    1. **Identify risk factors** — What market variables drive portfolio value? (log prices, rates, FX)
+    2. **Model risk factor changes** — Specify a distribution for $X_{n+1}$ (normal? t? GARCH?)
+    3. **Map to losses** — Apply the loss operator $\ell_{[n]}$ to translate factor changes to P&L
+    4. **Compute risk measures** — Calculate VaR, ES, or other summaries of the loss distribution
+    5. **Backtest and validate** — Compare predictions against realised outcomes; adjust if misspecified
+
+    **What can go wrong at each step:**
+
+    | Step | Typical failure | Consequence |
+    |---|---|---|
+    | Risk factor identification | Omitting a factor (e.g. liquidity spread) | Underestimated risk |
+    | Distribution modelling | Normal assumption with fat-tailed data | Massive underestimation of tail quantiles |
+    | Loss mapping | Linear approximation breaks down (options) | Model error during extreme moves |
+    | Risk measure | VaR chosen over ES → tail blindness | Regulatory arbitrage; hidden tail risk |
+    | Backtesting | Overfitting / lack of out-of-sample validation | Model passes tests it shouldn't |
+
+    **Model risk** — the risk that the model itself is wrong — is a second-order risk that
+    regulators increasingly require institutions to quantify and manage separately.
+    """)
 
 with st.expander("📖 Intuition: What is a risk factor?"):
     st.markdown(r"""

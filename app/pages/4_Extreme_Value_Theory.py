@@ -189,7 +189,74 @@ st.write("---")
 # ============================================================
 # SECTION 2: Hill Estimator
 # ============================================================
-st.header("2. Hill Estimator: Tail Index")
+st.header("2. Regular Variation and Heavy Tails")
+st.markdown(r"""
+The Hill estimator and the POT method are grounded in the theory of **regularly varying functions**
+— the precise mathematical language for heavy-tailed distributions.
+
+### Regular Variation
+A positive measurable function $f$ is **regularly varying** at $\infty$ with index $\rho \in \mathbb{R}$
+if for all $t > 0$:
+
+$$\lim_{x \to \infty} \frac{f(tx)}{f(x)} = t^\rho$$
+
+Written $f \in RV_\rho$. The case $\rho = 0$ is called **slowly varying** (e.g. $\log x$, constants).
+
+A random variable $X$ (or its distribution) is **regularly varying** with tail index $\alpha > 0$ if:
+
+$$P(X > x) = x^{-\alpha} L(x), \quad x \to \infty$$
+
+where $L$ is a slowly varying function. Equivalently, $P(X > \cdot) \in RV_{-\alpha}$.
+
+### Key Examples
+| Distribution | Survival function | Regularly varying? | Tail index $\alpha$ |
+|---|---|---|---|
+| Pareto($\alpha$) | $(x/x_m)^{-\alpha}$ | ✅ Yes | $\alpha$ |
+| Student-t($\nu$) | $\sim c \cdot x^{-\nu}$ | ✅ Yes | $\nu$ |
+| Log-Cauchy | $\sim (\log x)^{-1}$ (slowly varying) | ✅ Yes (borderline) | $0$ |
+| **Exponential** | $e^{-\lambda x}$ (decays faster than any power) | ❌ **No** | — |
+| Normal | $e^{-x^2/2}$ (super-exponential) | ❌ **No** | — |
+
+**The exponential distribution is NOT regularly varying** — its survival function $e^{-\lambda x}$
+decays exponentially, not polynomially, so the limit $e^{-\lambda(tx)}/e^{-\lambda x} = e^{-\lambda(t-1)x} \to 0$
+(not $t^\rho$) for any fixed $t > 1$. This is why EVT tail extrapolation is only valid for
+Pareto-type tails, not exponential or normal tails.
+
+### Why Regular Variation Matters for Risk
+- **Finite moments:** A regularly varying variable $X$ with index $\alpha$ has $E[X^p] < \infty$
+  iff $p < \alpha$. For $\alpha = 3$ (typical equity), mean and variance exist but kurtosis may not.
+- **VaR and ES extrapolation:** Under regular variation, high quantiles obey
+  $\text{VaR}_\alpha(L) \approx c \cdot (1-\alpha)^{-1/\xi}$ for large $\alpha$ — so the Hill
+  estimator of $\xi$ directly enables tail extrapolation beyond the data.
+""")
+
+with st.expander("📖 Estimating VaR and ES under regular variation"):
+    st.markdown(r"""
+    Suppose $P(L > x) \approx C x^{-1/\xi}$ for large $x$ (Pareto-type tail with index $1/\xi$).
+    Given the Hill estimate $\hat{\xi}$ at threshold $k$ (using the $k$-th largest loss $X_{(n-k)}$):
+
+    **Extremal CDF estimate:**
+    $$\hat{P}(L > x) = \frac{k}{n} \left(\frac{X_{(n-k)}}{x}\right)^{1/\hat{\xi}}, \quad x > X_{(n-k)}$$
+
+    **VaR extrapolation** (inverting the above for target level $\alpha > 1 - k/n$):
+    $$\widehat{\text{VaR}}_\alpha = X_{(n-k)} \cdot \left(\frac{k/n}{1-\alpha}\right)^{\hat{\xi}}$$
+
+    **ES extrapolation** (using the integral representation):
+    $$\widehat{\text{ES}}_\alpha = \frac{\widehat{\text{VaR}}_\alpha}{1 - \hat{\xi}}, \quad \hat{\xi} < 1$$
+
+    The ES formula shows that for $\hat{\xi}$ close to 1, ES becomes very large — meaning the
+    expected loss in the tail is many multiples of VaR. For $\hat{\xi} \geq 1$, the mean excess
+    is infinite and ES is formally undefined.
+
+    **Comparison with GPD/POT:** The POT method gives a more principled estimate using all
+    exceedances, while the Hill approach uses only the ratio of order statistics. For moderate
+    sample sizes the POT method is generally preferred.
+    """)
+
+st.write("---")
+
+
+st.header("3. Hill Estimator: Tail Index")
 st.markdown(r"""
 The **Hill estimator** estimates the **tail index** $\xi$ of a Pareto-type tail:
 
@@ -247,7 +314,7 @@ st.write("---")
 # ============================================================
 # SECTION 3: Mean Excess Plot (MEP)
 # ============================================================
-st.header("3. Mean Excess Plot (MEP)")
+st.header("4. Mean Excess Plot (MEP)")
 st.markdown(r"""
 The **mean excess function** is:
 
@@ -300,7 +367,7 @@ st.write("---")
 # ============================================================
 # SECTION 4: POT Method — GPD Fitting
 # ============================================================
-st.header("4. Peak-over-Threshold (POT) Method")
+st.header("5. Peak-over-Threshold (POT) Method")
 st.markdown(r"""
 For losses exceeding a high threshold $u$, the **Pickands–Balkema–de Haan theorem** states that
 the excess distribution converges to a **Generalized Pareto Distribution (GPD)**:
@@ -308,9 +375,37 @@ the excess distribution converges to a **Generalized Pareto Distribution (GPD)**
 $$F_u(y) = P(L - u \leq y \mid L > u) \approx G_{\xi, \sigma}(y) = 1 - \left(1 + \frac{\xi y}{\sigma}\right)^{-1/\xi}$$
 
 where $\xi$ is the **shape** (tail index) and $\sigma > 0$ is the **scale** parameter.
-
+The GPD parameters are estimated from the exceedances by **Maximum Likelihood Estimation**.
 Once fitted, the tail CDF, VaR, and ES can be extrapolated to any confidence level.
 """)
+
+with st.expander("📖 Maximum Likelihood Estimation — how it works and why it's needed"):
+    st.markdown(r"""
+    **The principle:** Given $n$ observations $x_1, \ldots, x_n$ assumed i.i.d. from a
+    parametric family $f_\theta$, the **MLE** finds the parameter $\hat{\theta}$ that makes
+    the observed data most probable:
+
+    $$\hat{\theta}_{\text{MLE}} = \arg\max_\theta \sum_{i=1}^n \log f_\theta(x_i)$$
+
+    (We maximise the **log-likelihood** for numerical convenience — log turns products into sums.)
+
+    **Why is MLE needed in risk management?**
+    - Historical simulation only works if you have enough data in the tail. For 99.9% VaR,
+      you need thousands of observations — rarely available.
+    - MLE fits a parametric model (GPD, GARCH, t-copula) to whatever data exists, then
+      extrapolates analytically to confidence levels beyond the sample.
+
+    **MLE for the GPD** (POT method): Given exceedances $y_1, \ldots, y_{n_u}$ above threshold $u$,
+    the log-likelihood is:
+    $$\ell(\xi, \sigma) = -n_u \log\sigma - \left(1 + \frac{1}{\xi}\right)\sum_{i=1}^{n_u} \log\left(1 + \frac{\xi y_i}{\sigma}\right)$$
+    Maximising over $(\xi, \sigma)$ gives $(\hat{\xi}, \hat{\sigma})$.
+
+    **For dependent data (GARCH):** The log-likelihood is no longer a sum of i.i.d. terms.
+    Instead it decomposes as:
+    $$\ell(\theta) = \sum_{t=1}^n \log f_\theta(x_t \mid x_1, \ldots, x_{t-1}) = \sum_{t=1}^n \log f_\theta(x_t \mid \sigma_t^2(\theta))$$
+    where $\sigma_t^2$ is the conditional variance given all past observations. This is the
+    **conditional log-likelihood** and is what the GARCH MLE page computes.
+    """)
 
 # Threshold selector
 q_threshold = st.slider(
