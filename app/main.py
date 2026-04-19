@@ -1,7 +1,9 @@
 import streamlit as st
-import streamlit.components.v1 as components
 
 st.set_page_config(page_title="RiskLearn", layout="wide", page_icon="🛡️")
+
+# Anchor target for back-to-top link
+st.markdown('<div id="top"></div>', unsafe_allow_html=True)
 
 # Sidebar — runs on every page via st.navigation
 with st.sidebar:
@@ -27,36 +29,27 @@ pages = {
 pg = st.navigation(pages)
 pg.run()
 
-components.html("""
-<script>
-(function() {
-  var pdoc = window.parent.document;
-
-  function scrollToTop() {
-    pdoc.querySelectorAll('*').forEach(function(el) {
-      try { if (el.scrollTop > 0) el.scrollTop = 0; } catch(e) {}
-    });
-    window.parent.scrollTo(0, 0);
-  }
-
-  if (pdoc.getElementById('btt-btn')) return;
-
-  var s = pdoc.createElement('style');
-  s.textContent =
-    '#btt-btn{position:fixed;bottom:2.5rem;right:2rem;z-index:999999;' +
-    'background:#262730;color:#fafafa;border:1px solid #888;' +
-    'border-radius:50%;width:2.8rem;height:2.8rem;' +
-    'font-size:1.4rem;line-height:2.8rem;text-align:center;' +
-    'cursor:pointer;opacity:0.85;}' +
-    '#btt-btn:hover{opacity:1;border-color:#fff;}';
-  pdoc.head.appendChild(s);
-
-  var btn = pdoc.createElement('button');
-  btn.id = 'btt-btn';
-  btn.title = 'Back to top';
-  btn.innerHTML = '&#8593;';
-  btn.addEventListener('click', scrollToTop);
-  pdoc.body.appendChild(btn);
-})();
-</script>
-""", height=1, scrolling=False)
+st.markdown("""
+<style>
+.btt-link {
+    position: fixed;
+    bottom: 2.5rem;
+    right: 2rem;
+    z-index: 999999;
+    background: #262730;
+    color: #fafafa !important;
+    border: 1px solid #888;
+    border-radius: 50%;
+    width: 2.8rem;
+    height: 2.8rem;
+    font-size: 1.4rem;
+    line-height: 2.8rem;
+    text-align: center;
+    text-decoration: none !important;
+    opacity: 0.85;
+    display: block;
+}
+.btt-link:hover { opacity: 1; border-color: #fff; }
+</style>
+<a class="btt-link" href="#top" title="Back to top">↑</a>
+""", unsafe_allow_html=True)
