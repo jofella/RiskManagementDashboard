@@ -28,7 +28,7 @@ pg.run()
 
 st.markdown("""
 <style>
-.btt-btn {
+#btt-btn {
     position: fixed;
     bottom: 2.5rem;
     right: 2rem;
@@ -46,13 +46,41 @@ st.markdown("""
     opacity: 0.85;
     transition: opacity 0.2s, border-color 0.2s;
 }
-.btt-btn:hover { opacity: 1; border-color: #fff; }
+#btt-btn:hover { opacity: 1; border-color: #fff; }
 </style>
-<button class="btt-btn" title="Back to top"
-  onclick="
-    (document.querySelector('[data-testid=stAppViewContainer]') ||
-     document.querySelector('.main') ||
-     document.documentElement
-    ).scrollTo({top:0,behavior:'smooth'})
-  ">↑</button>
+
+<button id="btt-btn" title="Back to top">↑</button>
+
+<script>
+(function() {
+    function scrollTop() {
+        // Try every plausible Streamlit scroll container
+        var selectors = [
+            '[data-testid="stAppViewContainer"]',
+            '[data-testid="stApp"]',
+            '.main',
+            '.block-container'
+        ];
+        selectors.forEach(function(sel) {
+            var el = document.querySelector(sel);
+            if (el) el.scrollTop = 0;
+        });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        window.scrollTo(0, 0);
+    }
+
+    function wire() {
+        var btn = document.getElementById('btt-btn');
+        if (btn && !btn._bttWired) {
+            btn.addEventListener('click', scrollTop);
+            btn._bttWired = true;
+        }
+    }
+
+    wire();
+    setTimeout(wire, 300);
+    setTimeout(wire, 1000);
+})();
+</script>
 """, unsafe_allow_html=True)
