@@ -28,86 +28,31 @@ pg.run()
 
 st.markdown("""
 <style>
-#back-to-top {
+.btt-btn {
     position: fixed;
     bottom: 2.5rem;
     right: 2rem;
-    z-index: 9999;
+    z-index: 999999;
     background-color: #262730;
     color: #fafafa;
-    border: 1px solid #555;
+    border: 1px solid #888;
     border-radius: 50%;
     width: 2.8rem;
     height: 2.8rem;
-    font-size: 1.3rem;
+    font-size: 1.4rem;
+    line-height: 2.8rem;
+    text-align: center;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.3s ease, border-color 0.2s ease;
-    pointer-events: none;
-}
-#back-to-top.visible {
     opacity: 0.85;
-    pointer-events: auto;
+    transition: opacity 0.2s, border-color 0.2s;
 }
-#back-to-top:hover {
-    opacity: 1;
-    border-color: #aaa;
-}
+.btt-btn:hover { opacity: 1; border-color: #fff; }
 </style>
-
-<button id="back-to-top" title="Back to top">↑</button>
-
-<script>
-(function() {
-    // Streamlit's actual scroll container (the main content area)
-    function getContainer() {
-        return (
-            window.parent.document.querySelector('[data-testid="stAppViewContainer"]') ||
-            window.parent.document.querySelector('.main') ||
-            window.parent.document.documentElement
-        );
-    }
-
-    function scrollToTop() {
-        var c = getContainer();
-        c.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function onScroll() {
-        var btn = window.parent.document.getElementById('back-to-top');
-        if (!btn) return;
-        var c = getContainer();
-        if (c.scrollTop > 300) {
-            btn.classList.add('visible');
-        } else {
-            btn.classList.remove('visible');
-        }
-    }
-
-    // Wait for DOM to be ready, then wire up
-    window.parent.addEventListener('load', function() {
-        var btn = window.parent.document.getElementById('back-to-top');
-        if (btn) btn.addEventListener('click', scrollToTop);
-        var c = getContainer();
-        c.addEventListener('scroll', onScroll);
-    });
-
-    // Also try immediately in case already loaded
-    setTimeout(function() {
-        var btn = window.parent.document.getElementById('back-to-top');
-        if (btn && !btn._wired) {
-            btn.addEventListener('click', scrollToTop);
-            btn._wired = true;
-        }
-        var c = getContainer();
-        if (c && !c._scrollWired) {
-            c.addEventListener('scroll', onScroll);
-            c._scrollWired = true;
-        }
-    }, 500);
-})();
-</script>
+<button class="btt-btn" title="Back to top"
+  onclick="
+    (document.querySelector('[data-testid=stAppViewContainer]') ||
+     document.querySelector('.main') ||
+     document.documentElement
+    ).scrollTo({top:0,behavior:'smooth'})
+  ">↑</button>
 """, unsafe_allow_html=True)
