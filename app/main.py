@@ -30,36 +30,33 @@ pg.run()
 components.html("""
 <script>
 (function() {
-    var doc = window.parent.document;
+  var pdoc = window.parent.document;
 
-    // Inject button + style into parent page if not already there
-    if (!doc.getElementById('btt-btn')) {
-        var style = doc.createElement('style');
-        style.textContent = [
-            '#btt-btn {',
-            '  position: fixed; bottom: 2.5rem; right: 2rem; z-index: 999999;',
-            '  background: #262730; color: #fafafa; border: 1px solid #888;',
-            '  border-radius: 50%; width: 2.8rem; height: 2.8rem;',
-            '  font-size: 1.4rem; line-height: 2.8rem; text-align: center;',
-            '  cursor: pointer; opacity: 0.85; transition: opacity 0.2s;',
-            '}',
-            '#btt-btn:hover { opacity: 1; border-color: #fff; }'
-        ].join('');
-        doc.head.appendChild(style);
+  function scrollToTop() {
+    pdoc.querySelectorAll('*').forEach(function(el) {
+      try { if (el.scrollTop > 0) el.scrollTop = 0; } catch(e) {}
+    });
+    window.parent.scrollTo(0, 0);
+  }
 
-        var btn = doc.createElement('button');
-        btn.id = 'btt-btn';
-        btn.title = 'Back to top';
-        btn.textContent = '\u2191';
-        btn.addEventListener('click', function() {
-            // Reset scrollTop on every element that has scrolled
-            doc.querySelectorAll('*').forEach(function(el) {
-                try { if (el.scrollTop > 0) el.scrollTop = 0; } catch(e) {}
-            });
-            window.parent.scrollTo(0, 0);
-        });
-        doc.body.appendChild(btn);
-    }
+  if (pdoc.getElementById('btt-btn')) return;
+
+  var s = pdoc.createElement('style');
+  s.textContent =
+    '#btt-btn{position:fixed;bottom:2.5rem;right:2rem;z-index:999999;' +
+    'background:#262730;color:#fafafa;border:1px solid #888;' +
+    'border-radius:50%;width:2.8rem;height:2.8rem;' +
+    'font-size:1.4rem;line-height:2.8rem;text-align:center;' +
+    'cursor:pointer;opacity:0.85;}' +
+    '#btt-btn:hover{opacity:1;border-color:#fff;}';
+  pdoc.head.appendChild(s);
+
+  var btn = pdoc.createElement('button');
+  btn.id = 'btt-btn';
+  btn.title = 'Back to top';
+  btn.innerHTML = '&#8593;';
+  btn.addEventListener('click', scrollToTop);
+  pdoc.body.appendChild(btn);
 })();
 </script>
-""", height=0)
+""", height=1, scrolling=False)
