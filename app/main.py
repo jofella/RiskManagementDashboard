@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="RiskLearn", layout="wide", page_icon="🛡️")
 
@@ -26,61 +27,39 @@ pages = {
 pg = st.navigation(pages)
 pg.run()
 
-st.markdown("""
-<style>
-#btt-btn {
-    position: fixed;
-    bottom: 2.5rem;
-    right: 2rem;
-    z-index: 999999;
-    background-color: #262730;
-    color: #fafafa;
-    border: 1px solid #888;
-    border-radius: 50%;
-    width: 2.8rem;
-    height: 2.8rem;
-    font-size: 1.4rem;
-    line-height: 2.8rem;
-    text-align: center;
-    cursor: pointer;
-    opacity: 0.85;
-    transition: opacity 0.2s, border-color 0.2s;
-}
-#btt-btn:hover { opacity: 1; border-color: #fff; }
-</style>
-
-<button id="btt-btn" title="Back to top">↑</button>
-
+components.html("""
 <script>
 (function() {
-    function scrollTop() {
-        // Try every plausible Streamlit scroll container
-        var selectors = [
-            '[data-testid="stAppViewContainer"]',
-            '[data-testid="stApp"]',
-            '.main',
-            '.block-container'
-        ];
-        selectors.forEach(function(sel) {
-            var el = document.querySelector(sel);
-            if (el) el.scrollTop = 0;
+    var doc = window.parent.document;
+
+    // Inject button + style into parent page if not already there
+    if (!doc.getElementById('btt-btn')) {
+        var style = doc.createElement('style');
+        style.textContent = [
+            '#btt-btn {',
+            '  position: fixed; bottom: 2.5rem; right: 2rem; z-index: 999999;',
+            '  background: #262730; color: #fafafa; border: 1px solid #888;',
+            '  border-radius: 50%; width: 2.8rem; height: 2.8rem;',
+            '  font-size: 1.4rem; line-height: 2.8rem; text-align: center;',
+            '  cursor: pointer; opacity: 0.85; transition: opacity 0.2s;',
+            '}',
+            '#btt-btn:hover { opacity: 1; border-color: #fff; }'
+        ].join('');
+        doc.head.appendChild(style);
+
+        var btn = doc.createElement('button');
+        btn.id = 'btt-btn';
+        btn.title = 'Back to top';
+        btn.textContent = '\u2191';
+        btn.addEventListener('click', function() {
+            // Reset scrollTop on every element that has scrolled
+            doc.querySelectorAll('*').forEach(function(el) {
+                try { if (el.scrollTop > 0) el.scrollTop = 0; } catch(e) {}
+            });
+            window.parent.scrollTo(0, 0);
         });
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-        window.scrollTo(0, 0);
+        doc.body.appendChild(btn);
     }
-
-    function wire() {
-        var btn = document.getElementById('btt-btn');
-        if (btn && !btn._bttWired) {
-            btn.addEventListener('click', scrollTop);
-            btn._bttWired = true;
-        }
-    }
-
-    wire();
-    setTimeout(wire, 300);
-    setTimeout(wire, 1000);
 })();
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
