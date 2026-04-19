@@ -57,17 +57,57 @@ st.markdown("""
     border-color: #aaa;
 }
 </style>
-<button id="back-to-top" title="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<button id="back-to-top" title="Back to top">↑</button>
+
 <script>
-window.addEventListener('scroll', function() {
-    const btn = document.getElementById('back-to-top');
-    if (btn) {
-        if (window.scrollY > 300) {
+(function() {
+    // Streamlit's actual scroll container (the main content area)
+    function getContainer() {
+        return (
+            window.parent.document.querySelector('[data-testid="stAppViewContainer"]') ||
+            window.parent.document.querySelector('.main') ||
+            window.parent.document.documentElement
+        );
+    }
+
+    function scrollToTop() {
+        var c = getContainer();
+        c.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function onScroll() {
+        var btn = window.parent.document.getElementById('back-to-top');
+        if (!btn) return;
+        var c = getContainer();
+        if (c.scrollTop > 300) {
             btn.classList.add('visible');
         } else {
             btn.classList.remove('visible');
         }
     }
-});
+
+    // Wait for DOM to be ready, then wire up
+    window.parent.addEventListener('load', function() {
+        var btn = window.parent.document.getElementById('back-to-top');
+        if (btn) btn.addEventListener('click', scrollToTop);
+        var c = getContainer();
+        c.addEventListener('scroll', onScroll);
+    });
+
+    // Also try immediately in case already loaded
+    setTimeout(function() {
+        var btn = window.parent.document.getElementById('back-to-top');
+        if (btn && !btn._wired) {
+            btn.addEventListener('click', scrollToTop);
+            btn._wired = true;
+        }
+        var c = getContainer();
+        if (c && !c._scrollWired) {
+            c.addEventListener('scroll', onScroll);
+            c._scrollWired = true;
+        }
+    }, 500);
+})();
 </script>
 """, unsafe_allow_html=True)
